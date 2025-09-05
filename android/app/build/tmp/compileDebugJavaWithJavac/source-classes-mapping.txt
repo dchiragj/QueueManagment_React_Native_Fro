@@ -1,0 +1,14 @@
+com/queueapp/ReactNativeFlipper.java
+ com.queueapp.ReactNativeFlipper
+ com.queueapp.ReactNativeFlipper$1
+ com.queueapp.ReactNativeFlipper$2
+ com.queueapp.ReactNativeFlipper$2$1
+com/queueapp/MainApplication.java
+ com.queueapp.MainApplication
+ com.queueapp.MainApplication$1
+com/queueapp/BuildConfig.java
+ com.queueapp.BuildConfig
+com/queueapp/MainActivity.java
+ com.queueapp.MainActivity
+com/facebook/react/PackageList.java
+ com.facebook.react.PackageList

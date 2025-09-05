@@ -28,8 +28,7 @@ DerivedData
 .gradle
 local.properties
 *.iml
-android/
-ios/
+
 
 # node.js
 #
@@ -41,6 +40,7 @@ buck-out/
 \.buckd/
 *.keystore
 !debug.keystore
+node_modules/
 
 # fastlane
 #

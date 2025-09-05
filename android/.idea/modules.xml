@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/QueueApp.iml" filepath="$PROJECT_DIR$/.idea/modules/QueueApp.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/QueueApp.app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/QueueApp.app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/364677075/QueueApp.react-native-community_async-storage.iml" filepath="$PROJECT_DIR$/.idea/modules/364677075/QueueApp.react-native-community_async-storage.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/1545584528/QueueApp.react-native-community_masked-view.iml" filepath="$PROJECT_DIR$/.idea/modules/1545584528/QueueApp.react-native-community_masked-view.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/1923222836/QueueApp.react-native-community_netinfo.iml" filepath="$PROJECT_DIR$/.idea/modules/1923222836/QueueApp.react-native-community_netinfo.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/1942579015/QueueApp.react-native-gesture-handler.iml" filepath="$PROJECT_DIR$/.idea/modules/1942579015/QueueApp.react-native-gesture-handler.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/296453749/QueueApp.react-native-reanimated.iml" filepath="$PROJECT_DIR$/.idea/modules/296453749/QueueApp.react-native-reanimated.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/-840971792/QueueApp.react-native-safe-area-context.iml" filepath="$PROJECT_DIR$/.idea/modules/-840971792/QueueApp.react-native-safe-area-context.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/1854002696/QueueApp.react-native-screens.iml" filepath="$PROJECT_DIR$/.idea/modules/1854002696/QueueApp.react-native-screens.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/-554020251/QueueApp.react-native-svg.iml" filepath="$PROJECT_DIR$/.idea/modules/-554020251/QueueApp.react-native-svg.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/-178500113/QueueApp.react-native-vector-icons.iml" filepath="$PROJECT_DIR$/.idea/modules/-178500113/QueueApp.react-native-vector-icons.iml" />
+    </modules>
+  </component>
+</project>
