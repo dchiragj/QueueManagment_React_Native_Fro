@@ -1,3 +1,4 @@
+
 export default {
   Splash: 'Splash',
   Welcome: 'Welcome',
@@ -7,6 +8,7 @@ export default {
   Onboarding: 'Onboarding',
 
   ForgotPassword: 'ForgotPassword',
+  ResetPassword:'ResetPassword',
 
   DrawerRoot: 'DrawerRoot',
 

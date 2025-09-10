@@ -6,6 +6,7 @@ import ForgotPasswordScreen from '../../screens/Membership/ForgotPassword/Forgot
 import { createSwitchNavigator } from 'react-navigation';
 import VerifyEmailScreen from '@app/app/screens/Membership/Signup/VerifyEmail';
 import OnboardingScreen from './../../screens/Membership/Onboarding/Onboarding';
+import ResetPasswordScreen from '@app/app/screens/Membership/ResetPassword/ResetPassword';
 
 const routes = {
   [screens.Welcome]: {
@@ -30,7 +31,12 @@ const routes = {
   [screens.Onboarding]: {
     screen: OnboardingScreen,
     path: 'Onboarding'
-  }
+  },
+  [screens.ResetPassword]: {
+  screen: ResetPasswordScreen,
+  path: 'resetpassword'
+}
+
 };
 
 const config = {

@@ -18,8 +18,10 @@ import { clearAuthResponseMsg } from '../../../actions/authActions';
 import { login } from '../../../services/authService';
 
 function Login(props) {
-  const [email, setEmail] = useState(__DEV__ ? 'kinjald+1@algoscript.in' : 'kinjald+1@algoscript.in');
-  const [password, setPassword] = useState(__DEV__ ? '123456' : '123456');
+  // const [email, setEmail] = useState(__DEV__ ? 'kinjald+1@algoscript.in' : 'kinjald+1@algoscript.in');
+  const [email, setEmail] = useState();
+  // const [password, setPassword] = useState(__DEV__ ? '123456' : '123456');
+  const [password, setPassword] = useState();
   const [isPasswordVisible, setPasswordVisibility] = useState(false);
   const { loading, resError = {} } = props.auth;
 

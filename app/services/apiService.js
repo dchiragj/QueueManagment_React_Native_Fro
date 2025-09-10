@@ -44,6 +44,28 @@ alert(email);
     throw new Error(msg);
   }
 };
+export const verifyOtp = async (email, otp) => {
+  try {
+    const response = await apiService.post('/auth/verify-otp', { email, otp });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Failed to verify OTP');
+  }
+};
+
+export const resetPassword = async (email, password, otp) => {
+console.log(email, password, otp,"email, password, otp")
+  try {
+    const response = await apiService.post('/auth/reset-password', { email, password, otp });
+    console.log(response,"res");
+    
+    return response.data;
+  } catch (error) {
+    console.log(error);
+    
+    throw new Error(error.response?.data?.message || 'Failed to reset password');
+  }
+};
 export const verifyEmailApi = async (code) => {
   try {
     const response = await apiService.post('/auth/verify', { code });
