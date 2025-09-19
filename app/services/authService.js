@@ -40,8 +40,6 @@ export const login = (obj) => async (dispatch) => {
     console.log("testtt-1");
     
   const response = await axios.post(`${baseUrl}/auth/login`, obj);
-console.log(response,"ressssss");
-console.log("tstttt-2");
 
     const { data } = response.data;
       console.log("data------>",data);

@@ -33,7 +33,7 @@ export const getCategories = async () => {
   }
 };
 export const forgotPassword = async (email) => {
-alert(email);
+
   
   try {
     const response = await apiService.post('/auth/forgot-password', { email });
@@ -54,15 +54,11 @@ export const verifyOtp = async (email, otp) => {
 };
 
 export const resetPassword = async (email, password, otp) => {
-console.log(email, password, otp,"email, password, otp")
   try {
-    const response = await apiService.post('/auth/reset-password', { email, password, otp });
-    console.log(response,"res");
-    
+    const response = await apiService.post('/auth/reset-password', { email, password, otp }); 
     return response.data;
   } catch (error) {
     console.log(error);
-    
     throw new Error(error.response?.data?.message || 'Failed to reset password');
   }
 };
@@ -81,6 +77,49 @@ export const verificationcode = async (code) => {
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || 'Failed to verify email');
+  }
+};
+
+export const profileUpdate = async (obj) => {
+  try {
+    const response = await apiService.post('/user/profile', obj);
+    return response.data;
+  } catch (error) {
+    console.error('Profile update error:', error.response?.data?.message || error.message);
+    throw new Error(error.response?.data?.message || 'Failed to update profile');
+  }
+};
+export const getUserProfileme = async () => {
+  try {
+    const response = await apiService.get('/user/me');
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Failed to get user profile');
+  }
+};
+export const createQueue = async (queueData) => {
+  console.log(queueData,"data");
+  
+  try {
+    const response = await apiService.post('/queue', queueData);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Failed to create queue');
+  }
+};
+export const getQueueList = async (params = {}) => {
+  try {
+    const user = await getAuthUser();
+    const defaultParams = {
+      merchantId: user?.id
+    };
+    const response = await apiService.get('/queue/list', { params: defaultParams });
+    // console.log(response,"list");
+    // console.log(response.status,"response.status === 'ok'");
+    // response.status
+    return response.status === 200 ? response.data || [] : [];
+  } catch (error) {
+    throw error;
   }
 };
 

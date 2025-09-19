@@ -8,7 +8,6 @@ export default {
   Onboarding: 'Onboarding',
 
   ForgotPassword: 'ForgotPassword',
-  ResetPassword:'ResetPassword',
 
   DrawerRoot: 'DrawerRoot',
 

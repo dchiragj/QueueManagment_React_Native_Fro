@@ -7,6 +7,8 @@ import {
   setProfileResponseError,
   clearProfileResponseMsg
 } from '../actions/profileActions';
+import { getUserProfileme, profileUpdate } from './apiService';
+import formDataEntries from 'form-data-entries';
 const baseUrl = getBaseUrl();
 
 export const updateUserProfile = (obj) => async (dispatch) => {
@@ -22,15 +24,15 @@ export const updateUserProfile = (obj) => async (dispatch) => {
       dispatchAuthError('lastname', 'Last Name is Required', dispatch);
       return false;
     } else if (!obj.address) {
-      dispatchAuthError('lastname', 'Address is Required', dispatch);
+      dispatchAuthError('address', 'Address is Required', dispatch);
       return false;
     } else if (!obj.gender) {
       dispatchAuthError('gender', 'Gender is Required', dispatch);
       return false;
     }
     dispatch(setProfileLoader(true));
-    const response = await axios.post(`${baseUrl}/user/profile`, obj);
-    const { data } = response.data;
+    // const response = await profileUpdate(obj); // Use api service
+    // const { data } = response; // Adjust based on actual response structure
     dispatch(setProfile(data));
     return true;
   } catch (e) {
@@ -45,8 +47,8 @@ export const getUserProfile = () => async (dispatch) => {
   try {
     dispatch(clearProfileResponseMsg());
     dispatch(setProfileLoader(true));
-    const response = await axios.get(`${baseUrl}/user/me`);
-    const { data } = response.data;
+    const response = await getUserProfileme(); // Use api service
+    const { data } = response; // Adjust based on actual response structure
     dispatch(setProfile(data));
     return true;
   } catch (e) {

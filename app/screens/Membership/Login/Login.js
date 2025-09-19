@@ -19,9 +19,9 @@ import { login } from '../../../services/authService';
 
 function Login(props) {
   // const [email, setEmail] = useState(__DEV__ ? 'kinjald+1@algoscript.in' : 'kinjald+1@algoscript.in');
-  const [email, setEmail] = useState();
+  const [email, setEmail] = useState('queuemanagment8@gmail.com');
   // const [password, setPassword] = useState(__DEV__ ? '123456' : '123456');
-  const [password, setPassword] = useState();
+  const [password, setPassword] = useState('test123');
   const [isPasswordVisible, setPasswordVisibility] = useState(false);
   const { loading, resError = {} } = props.auth;
 
@@ -38,7 +38,6 @@ function Login(props) {
       password: String(password),
       role: 'merchant'
     };
-    console.log(loginObj);
     const result = await props.login(loginObj);
     let screen;
     if (result) {
