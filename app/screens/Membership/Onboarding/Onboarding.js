@@ -173,7 +173,7 @@ const Onboarding = (props) => {
           const imageAsset = response.assets ? response.assets[0] : response; // Handle v4/v5
           console.log(imageAsset,"img");
           
-          setSelectedImage({ uri: imageAsset.uri });
+          setSelectedImage(imageAsset );
           handleFormChange('ProfileUrl', imageAsset.uri);
         }
       } catch (error) {

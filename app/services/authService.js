@@ -180,8 +180,8 @@ export const verificationCode = () => async (dispatch) => {
     dispatch(clearAuthResponseMsg());
     dispatch(setAuthLoader(true));
     // const response = await axios.post(`${baseUrl}/auth/verification-code`);
-    const data = await verificationcode(code);
-        alert(JSON.stringify(data),"data");
+    const response = await verificationcode(code);
+        alert(JSON.stringify(response),"data");
     return true;
   } catch (e) {
     alert(`apiErr-verificationcode: ${e}`);

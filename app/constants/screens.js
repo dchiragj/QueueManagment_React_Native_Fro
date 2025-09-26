@@ -6,7 +6,7 @@ export default {
   Signup: 'Signup',
   VerifyEmail: 'VerifyEmail',
   Onboarding: 'Onboarding',
-
+  QRScanner:'QRScanner',
   ForgotPassword: 'ForgotPassword',
 
   DrawerRoot: 'DrawerRoot',

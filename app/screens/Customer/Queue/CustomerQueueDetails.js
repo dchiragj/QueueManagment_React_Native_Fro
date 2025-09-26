@@ -51,7 +51,7 @@ const CustomerQueueDetails = (props) => {
         </View>
         <Button
           onPress={onPressGenerateToken}
-          ButtonText='Join Queue '
+          ButtonText='Join Queue'
           style={[s.btn, AppStyles.btnStyle]}
           animationStyle={s.btn}
         />

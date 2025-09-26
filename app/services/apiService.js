@@ -89,6 +89,25 @@ export const profileUpdate = async (obj) => {
     throw new Error(error.response?.data?.message || 'Failed to update profile');
   }
 };
+// export const profileUpdate = async (formData) => {
+//   console.log(formData,"data");
+  
+//   try {
+//     const response = await axios.post('http://192.168.2.11:8008/api/user/profile', formData, {
+//       headers: {
+//         'Content-Type': 'multipart/form-data', // optional, axios sets automatically
+//       },
+//     });
+//     return response.data;
+//   } catch (error) {``
+//     console.error(
+//       'Profile update error:',
+//       error.response?.data?.message || error.message
+//     );
+//     throw new Error(error.response?.data?.message || 'Failed to update profile');
+//   }
+// };
+
 export const getUserProfileme = async () => {
   try {
     const response = await apiService.get('/user/me');
@@ -120,6 +139,28 @@ export const getQueueList = async (params = {}) => {
     return response.status === 200 ? response.data || [] : [];
   } catch (error) {
     throw error;
+  }
+};
+
+export const checkToken = async (obj) => {
+  console.log(obj,"obj");
+  
+  try {
+    const response = await apiService.post('/queue/check-token', obj);
+    return response.data;
+  } catch (error) {
+    console.error('Check token error:', error.response?.data?.message || error.message);
+    throw new Error(error.response?.data?.message || 'Failed to check token');
+  }
+};
+
+export const generateToken = async (obj) => {
+  try {
+    const response = await apiService.post('/queue/generate-token', obj);
+    return response.data;
+  } catch (error) {
+    console.error('Generate token error:', error.response?.data?.message || error.message);
+    throw new Error(error.response?.data?.message || 'Failed to generate token');
   }
 };
 

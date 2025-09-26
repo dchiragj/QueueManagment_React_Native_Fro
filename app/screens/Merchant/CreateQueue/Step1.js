@@ -230,7 +230,7 @@ const Step1 = ({ navigation }) => {
     end_date: null,
     noOfDesk: null,
     start_number: 1,
-    end_number: 0,
+    end_number: 50,
     address: '',
     deskDetails: [],
     problems: [],
@@ -277,34 +277,38 @@ const Step1 = ({ navigation }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const onSubmit = async () => {
-    if (!validateForm()) {
-      Alert.alert('Validation Error', 'Please fix the errors in the form');
-      return;
-    }
+ const onSubmit = async () => {
+  if (!validateForm()) {
+    Alert.alert('Validation Error', 'Please fix the errors in the form');
+    return;
+  }
 
-    setLoading(true);
-    try {
-      const payload = {
-        ...formData,
-        category: formData.category.toString(),
-        start_date: formatDateForSQL(new Date(formData.start_date)),
-        end_date: formatDateForSQL(new Date(formData.end_date)),
-      };
-      const response = await createQueue(payload);
-      Alert.alert('Success', 'Queue created successfully!');
-      // Fetch latest queues
-      const queue = await getQueueList();
-      // Navigate & pass queues to MyQueue
-      navigation.navigate('MyQueue',{ queues: queue.data ?? [] });
-    } catch (error) {
-      console.error('Submit error:', error.message);
-      setResError({ error: error.message || 'Failed to create queue' });
-      Alert.alert('Error', error.message || 'Failed to create queue');
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  try {
+    const payload = {
+      ...formData,
+      category: formData.category.toString(),
+      start_date: formatDateForSQL(new Date(formData.start_date)),
+      end_date: formatDateForSQL(new Date(formData.end_date)),
+    };
+    console.log(payload,"play");
+    
+    const response = await createQueue(payload);
+    console.log(response,"res");
+    
+    Alert.alert('Success', 'Queue created successfully! QR code has been sent to your email.');
+    // Fetch latest queues
+    const queue = await getQueueList();
+    // Navigate & pass queues to MyQueue
+    navigation.navigate('MyQueue', { queues: queue.data ?? [] });
+  } catch (error) {
+    console.error('Submit error:', error.message);
+    setResError({ error: error.message || 'Failed to create queue' });
+    Alert.alert('Error', error.message || 'Failed to create queue');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const onStartDateChange = (date) => {
     let parsedDate = date;
@@ -424,7 +428,7 @@ const Step1 = ({ navigation }) => {
           <View style={s.tokenOption}>
             <TextView
               style={s.tokenNumberText}
-              text={'Token starts with 01 to'}
+              text={'Token starts with 01'}
               type={'body-one'}
               color={colors.white}
             />
@@ -433,10 +437,10 @@ const Step1 = ({ navigation }) => {
               placeholder='50'
               wrapperStyle={s.wrapperStyle}
               style={s.inputPlaceholder}
-              value={formData.end_number.toString()}
-              onChangeText={(text) => setFormData({ ...formData, end_number: parseInt(text)|| 0})}
+              value={formData.start_number.toString()}
+              onChangeText={(text) => setFormData({ ...formData, start_number: parseInt(text)|| 0})}
               keyboardType="numeric"
-              error={errors.end_number}
+              error={errors.start_number}
               editable={!loading}
             />
           </View>
@@ -464,6 +468,7 @@ const Step1 = ({ navigation }) => {
             {errors.deskDetails && <Text style={s.errorText}>{errors.deskDetails}</Text>}
           </View>
         )}
+        
         <View style={s.topBorder} />
         <TextView style={s.locationHeader} text={'Add Queue Location'} type={'body-one'} isTextColorWhite={true} />
         <Input

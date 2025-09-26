@@ -22,3 +22,4 @@ const config = {
 const DrawerNavigator = createDrawerNavigator(Routes, config);
 
 export default DrawerNavigator;
+  
