@@ -205,7 +205,7 @@
 
 import TextView from '@app/app/components/TextView/TextView';
 import { colors } from '@app/app/styles';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, SafeAreaView, StyleSheet, Alert } from 'react-native';
 import NavigationOptions from '@app/app/components/NavigationOptions';
 import ScrollableAvoidKeyboard from '@app/app/components/ScrollableAvoidKeyboard/ScrollableAvoidKeyboard';
@@ -219,10 +219,10 @@ import DatePicker from '../../../components/DatePicker';
 import { borderRadius, indent } from '@app/app/styles/dimensions';
 import { Button } from '@app/app/components/Button';
 import screens from '../../../constants/screens';
-import { createQueue, getQueueList } from '@app/app/services/apiService';
+import { createQueue, getCategories, getQueueList } from '@app/app/services/apiService';
 
-const Step1 = ({ navigation }) => {
-  const [formData, setFormData] = useState({
+const Step1 = ( { navigation } ) => {
+  const [ formData, setFormData ] = useState( {
     category: '',
     name: '',
     description: '',
@@ -235,26 +235,26 @@ const Step1 = ({ navigation }) => {
     deskDetails: [],
     problems: [],
     solutions: [],
-  });
+  } );
 
-  const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [resError, setResError] = useState({});
-
-  const formatDateForSQL = (date) => {
-    if (!date || !(date instanceof Date) || isNaN(date)) return null;
-    return date.toISOString().slice(0, 19).replace('T', ' '); // YYYY-MM-DD HH:mm:ss
+  const [ errors, setErrors ] = useState( {} );
+  const [ loading, setLoading ] = useState( false );
+  const [ resError, setResError ] = useState( {} );
+  const [ categories, setCategories ] = useState( [] );
+  const formatDateForSQL = ( date ) => {
+    if ( !date || !( date instanceof Date ) || isNaN( date ) ) return null;
+    return date.toISOString().slice( 0, 19 ).replace( 'T', ' ' ); // YYYY-MM-DD HH:mm:ss
   };
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.name) newErrors.name = 'Name is required';
-    if (!formData.category) newErrors.category = 'Category is required';
-    if (!formData.description) newErrors.description = 'Description is required';
-    if (!formData.start_date || !(formData.start_date instanceof Date) || isNaN(formData.start_date)) {
+    if ( !formData.name ) newErrors.name = 'Name is required';
+    if ( !formData.category ) newErrors.category = 'Category is required';
+    if ( !formData.description ) newErrors.description = 'Description is required';
+    if ( !formData.start_date || !( formData.start_date instanceof Date ) || isNaN( formData.start_date ) ) {
       newErrors.start_date = 'Valid start date is required';
     }
-    if (!formData.end_date || !(formData.end_date instanceof Date) || isNaN(formData.end_date)) {
+    if ( !formData.end_date || !( formData.end_date instanceof Date ) || isNaN( formData.end_date ) ) {
       newErrors.end_date = 'Valid end date is required';
     }
     if (
@@ -266,359 +266,380 @@ const Step1 = ({ navigation }) => {
     ) {
       newErrors.end_date = 'End date must be after start date';
     }
-    if (!formData.start_number || formData.start_number < 1) {
+    if ( !formData.start_number || formData.start_number < 1 ) {
       newErrors.start_number = 'Start number must be a positive integer';
     }
-    if (!formData.end_number || formData.end_number <= formData.start_number) {
+    if ( !formData.end_number || formData.end_number <= formData.start_number ) {
       newErrors.end_number = 'End number must be greater than start number';
     }
-    if (!formData.address) newErrors.address = 'Address is required';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    if ( !formData.address ) newErrors.address = 'Address is required';
+    setErrors( newErrors );
+    return Object.keys( newErrors ).length === 0;
   };
 
- const onSubmit = async () => {
-  if (!validateForm()) {
-    Alert.alert('Validation Error', 'Please fix the errors in the form');
-    return;
-  }
+  const onSubmit = async () => {
+    if ( !validateForm() ) {
+      Alert.alert( 'Validation Error', 'Please fix the errors in the form' );
+      return;
+    }
 
-  setLoading(true);
-  try {
-    const payload = {
-      ...formData,
-      category: formData.category.toString(),
-      start_date: formatDateForSQL(new Date(formData.start_date)),
-      end_date: formatDateForSQL(new Date(formData.end_date)),
+    setLoading( true );
+    try {
+      const payload = {
+        ...formData,
+        category: formData.category.toString(),
+        start_date: formatDateForSQL( new Date( formData.start_date ) ),
+        end_date: formatDateForSQL( new Date( formData.end_date ) ),
+      };
+      const response = await createQueue( payload );
+
+      Alert.alert( 'Success', 'Queue created successfully! QR code has been sent to your email.' );
+      // Fetch latest queues
+      const queue = await getQueueList();
+      // Navigate & pass queues to MyQueue
+      navigation.navigate( 'MyQueue', { queues: queue.data ?? [] } );
+    } catch ( error ) {
+      console.error( 'Submit error:', error.message );
+      setResError( { error: error.message || 'Failed to create queue' } );
+      Alert.alert( 'Error', error.message || 'Failed to create queue' );
+    } finally {
+      setLoading( false );
+    }
+  };
+
+  const onStartDateChange = ( date ) => {
+    let parsedDate = date;
+    if ( typeof date === 'string' ) {
+      parsedDate = new Date( date );
+    }
+    if ( parsedDate && !isNaN( parsedDate ) ) {
+      setFormData( { ...formData, start_date: parsedDate } );
+    } else {
+      console.warn( 'Invalid start date:', date );
+      setErrors( { ...errors, start_date: 'Invalid date format' } );
+    }
+  };
+
+  const onEndDateChange = ( date ) => {
+    let parsedDate = date;
+    if ( typeof date === 'string' ) {
+      parsedDate = new Date( date );
+    }
+    if ( parsedDate && !isNaN( parsedDate ) ) {
+      setFormData( { ...formData, end_date: parsedDate } );
+    } else {
+      console.warn( 'Invalid end date:', date );
+      setErrors( { ...errors, end_date: 'Invalid date format' } );
+    }
+  };
+
+  const handleNoOfDeskChange = ( value ) => {
+    const deskValue = parseInt( value );
+    const newDeskDetails = Array.from( { length: deskValue }, ( _, i ) => ( {
+      username: `Desk ${ i + 1 }`,
+    } ) );
+    setFormData( { ...formData, noOfDesk: deskValue, deskDetails: newDeskDetails } );
+  };
+
+  const updateDeskDetail = ( index, username ) => {
+    const newDeskDetails = [ ...formData.deskDetails ];
+    newDeskDetails[ index ] = { ...newDeskDetails[ index ], username };
+    setFormData( { ...formData, deskDetails: newDeskDetails } );
+  };
+  const handledcategorylist = async () => {
+    try {
+      const res = await getCategories();
+      const list = res?.data?.map( ( c ) => ( {
+        text: c.name,
+        value: c.id, // or c.id if your API needs numeric
+      } ) );
+      setCategories( list );
+      return list; // Add this return statement
+    } catch ( err ) {
+      console.error( "Error fetching categories:", err );
+      setCategories( [] );
+      return []; // Return an empty array in case of error
+    }
+  };
+
+  useEffect( () => {
+    const fetchCategories = async () => {
+      const list = await handledcategorylist();
+      setCategories( list );
     };
-    console.log(payload,"play");
-    
-    const response = await createQueue(payload);
-    console.log(response,"res");
-    
-    Alert.alert('Success', 'Queue created successfully! QR code has been sent to your email.');
-    // Fetch latest queues
-    const queue = await getQueueList();
-    // Navigate & pass queues to MyQueue
-    navigation.navigate('MyQueue', { queues: queue.data ?? [] });
-  } catch (error) {
-    console.error('Submit error:', error.message);
-    setResError({ error: error.message || 'Failed to create queue' });
-    Alert.alert('Error', error.message || 'Failed to create queue');
-  } finally {
-    setLoading(false);
-  }
-};
+    fetchCategories();
+  }, [] );
 
-  const onStartDateChange = (date) => {
-    let parsedDate = date;
-    if (typeof date === 'string') {
-      parsedDate = new Date(date);
-    }
-    if (parsedDate && !isNaN(parsedDate)) {
-      setFormData({ ...formData, start_date: parsedDate });
-    } else {
-      console.warn('Invalid start date:', date);
-      setErrors({ ...errors, start_date: 'Invalid date format' });
-    }
+
+  const handleProblemsChange = ( value ) => {
+    setFormData( { ...formData, problems: value } );
   };
 
-  const onEndDateChange = (date) => {
-    let parsedDate = date;
-    if (typeof date === 'string') {
-      parsedDate = new Date(date);
-    }
-    if (parsedDate && !isNaN(parsedDate)) {
-      setFormData({ ...formData, end_date: parsedDate });
-    } else {
-      console.warn('Invalid end date:', date);
-      setErrors({ ...errors, end_date: 'Invalid date format' });
-    }
-  };
-
-  const handleNoOfDeskChange = (value) => {
-    const deskValue = parseInt(value);
-    const newDeskDetails = Array.from({ length: deskValue }, (_, i) => ({
-      username: `Desk ${i + 1}`,
-    }));
-    setFormData({ ...formData, noOfDesk: deskValue, deskDetails: newDeskDetails });
-  };
-
-  const updateDeskDetail = (index, username) => {
-    const newDeskDetails = [...formData.deskDetails];
-    newDeskDetails[index] = { ...newDeskDetails[index], username };
-    setFormData({ ...formData, deskDetails: newDeskDetails });
-  };
-
-  const handleProblemsChange = (value) => {
-    setFormData({ ...formData, problems: value });
-  };
-
-  const handleSolutionsChange = (value) => {
-    setFormData({ ...formData, solutions: value });
+  const handleSolutionsChange = ( value ) => {
+    setFormData( { ...formData, solutions: value } );
   };
 
   return (
-    <SafeAreaView style={AppStyles.root}>
-      <ScrollableAvoidKeyboard showsVerticalScrollIndicator={false} keyboardShouldPersistTaps={'handled'}>
-        <TextView text={'Queue Details'} type={'body-one'} isTextColorWhite={true} style={[AppStyles.titleStyle]} />
-        <FormGroup style={[AppStyles.formContainer, s.firstFormWrapper]}>
+    <SafeAreaView style={ AppStyles.root }>
+      <ScrollableAvoidKeyboard showsVerticalScrollIndicator={ false } keyboardShouldPersistTaps={ 'handled' }>
+        <TextView text={ 'Queue Details' } type={ 'body-one' } isTextColorWhite={ true } style={ [ AppStyles.titleStyle ] } />
+        <FormGroup style={ [ AppStyles.formContainer, s.firstFormWrapper ] }>
           <Input
-            returnKeyType={'next'}
+            returnKeyType={ 'next' }
             placeholder='Enter Queue Name'
-            isIconLeft={true}
-            leftIconName={'create'}
-            value={formData.name}
-            onChangeText={(text) => setFormData({ ...formData, name: text })}
-            error={errors.name}
-            editable={!loading}
+            isIconLeft={ true }
+            leftIconName={ 'create' }
+            value={ formData.name }
+            onChangeText={ ( text ) => setFormData( { ...formData, name: text } ) }
+            error={ errors.name }
+            editable={ !loading }
           />
         </FormGroup>
         <FormGroup>
           <Picker
-            label={null}
-            isPlaceholderItem={true}
-            containerStyle={s.fullborderBox}
-            data={QueueCategory}
-            itemKeyField={'text'}
-            itemValueField={'text'}
-            isLeftIcon={true}
-            leftIconName={'search'}
-            onValueChange={(value) => setFormData({ ...formData, category: value })}
-            value={formData.category}
-            enabled={!loading}
+            label={ null }
+            isPlaceholderItem={ true }
+            containerStyle={ s.fullborderBox }
+            data={ categories }
+            itemKeyField={ 'value' }
+            itemValueField={ 'text' }
+            isLeftIcon={ true }
+            leftIconName={ 'search' }
+            onValueChange={ ( value ) => { console.log( value, "value" ); setFormData( { ...formData, category: value } ); } }
+            value={ formData.category }
+            enabled={ !loading }
           />
-          {errors.category && <Text style={s.errorText}>{errors.category}</Text>}
+          { errors.category && <Text style={ s.errorText }>{ errors.category }</Text> }
         </FormGroup>
-        <View style={s.topBorder} />
-        <View style={s.dateWrapper}>
+        <View style={ s.topBorder } />
+        <View style={ s.dateWrapper }>
           <TextView
-            style={s.dateTextHeader}
-            text={'Queue Time Period Start To End'}
-            type={'body-one'}
-            isTextColorWhite={true}
+            style={ s.dateTextHeader }
+            text={ 'Queue Time Period Start To End' }
+            type={ 'body-one' }
+            isTextColorWhite={ true }
           />
-          <View style={s.DatePickerWrapper}>
-            <View style={s.containerStyle}>
+          <View style={ s.DatePickerWrapper }>
+            <View style={ s.containerStyle }>
               <DatePicker
-                style={s.DatePicker}
-                containerStyle={s.containerStyle}
-                onDateChange={onStartDateChange}
+                style={ s.DatePicker }
+                containerStyle={ s.containerStyle }
+                onDateChange={ onStartDateChange }
                 placeholder="Start Date"
-                selectedDate={formData.start_date}
-                disabled={loading}
+                selectedDate={ formData.start_date }
+                disabled={ loading }
               />
-              {errors.start_date && <Text style={s.errorText}>{errors.start_date}</Text>}
+              { errors.start_date && <Text style={ s.errorText }>{ errors.start_date }</Text> }
             </View>
-            <View style={s.containerStyle}>
+            <View style={ s.containerStyle }>
               <DatePicker
-                style={s.DatePicker}
-                containerStyle={s.containerStyle}
-                onDateChange={onEndDateChange}
+                style={ s.DatePicker }
+                containerStyle={ s.containerStyle }
+                onDateChange={ onEndDateChange }
                 placeholder="End Date"
-                selectedDate={formData.end_date}
-                disabled={loading}
+                selectedDate={ formData.end_date }
+                disabled={ loading }
               />
-              {errors.end_date && <Text style={s.errorText}>{errors.end_date}</Text>}
+              { errors.end_date && <Text style={ s.errorText }>{ errors.end_date }</Text> }
             </View>
           </View>
         </View>
-        <View style={s.topBorder} />
-        <View style={s.tokenWrapper}>
-          <View style={s.tokenOption}>
+        <View style={ s.topBorder } />
+        <View style={ s.tokenWrapper }>
+          <View style={ s.tokenOption }>
             <TextView
-              style={s.tokenNumberText}
-              text={'Token starts with 01'}
-              type={'body-one'}
-              color={colors.white}
+              style={ s.tokenNumberText }
+              text={ 'Token starts with 01' }
+              type={ 'body-one' }
+              color={ colors.white }
             />
             <Input
-              returnKeyType={'next'}
+              returnKeyType={ 'next' }
               placeholder='50'
-              wrapperStyle={s.wrapperStyle}
-              style={s.inputPlaceholder}
-              value={formData.start_number.toString()}
-              onChangeText={(text) => setFormData({ ...formData, start_number: parseInt(text)|| 0})}
+              wrapperStyle={ s.wrapperStyle }
+              style={ s.inputPlaceholder }
+              value={ formData.start_number.toString() }
+              onChangeText={ ( text ) => setFormData( { ...formData, start_number: parseInt( text ) || 0 } ) }
               keyboardType="numeric"
-              error={errors.start_number}
-              editable={!loading}
+              error={ errors.start_number }
+              editable={ !loading }
             />
           </View>
         </View>
-        {formData.noOfDesk > 0 && (
-          <View style={s.deskDetailsWrapper}>
+        { formData.noOfDesk > 0 && (
+          <View style={ s.deskDetailsWrapper }>
             <TextView
-              style={s.deskDetailsHeader}
-              text={'Desk Details'}
-              type={'body-one'}
-              isTextColorWhite={true}
+              style={ s.deskDetailsHeader }
+              text={ 'Desk Details' }
+              type={ 'body-one' }
+              isTextColorWhite={ true }
             />
-            {formData.deskDetails.map((desk, index) => (
-              <FormGroup key={index} style={s.deskDetailItem}>
+            { formData.deskDetails.map( ( desk, index ) => (
+              <FormGroup key={ index } style={ s.deskDetailItem }>
                 <Input
-                  returnKeyType={'next'}
-                  placeholder={`Desk ${index + 1} Username`}
-                  value={desk.username}
-                  onChangeText={(text) => updateDeskDetail(index, text)}
-                  error={errors.deskDetails}
-                  editable={!loading}
+                  returnKeyType={ 'next' }
+                  placeholder={ `Desk ${ index + 1 } Username` }
+                  value={ desk.username }
+                  onChangeText={ ( text ) => updateDeskDetail( index, text ) }
+                  error={ errors.deskDetails }
+                  editable={ !loading }
                 />
               </FormGroup>
-            ))}
-            {errors.deskDetails && <Text style={s.errorText}>{errors.deskDetails}</Text>}
+            ) ) }
+            { errors.deskDetails && <Text style={ s.errorText }>{ errors.deskDetails }</Text> }
           </View>
-        )}
-        
-        <View style={s.topBorder} />
-        <TextView style={s.locationHeader} text={'Add Queue Location'} type={'body-one'} isTextColorWhite={true} />
+        ) }
+
+        <View style={ s.topBorder } />
+        <TextView style={ s.locationHeader } text={ 'Add Queue Location' } type={ 'body-one' } isTextColorWhite={ true } />
         <Input
-          returnKeyType={'next'}
+          returnKeyType={ 'next' }
           placeholder='Enter Address'
-          isIconLeft={true}
-          leftIconName={'location'}
-          isIconRight={true}
-          rightIconName={'locate'}
-          style={s.addressInput}
-          wrapperStyle={s.addressInputWrapperStyle}
-          value={formData.address}
-          onChangeText={(text) => setFormData({ ...formData, address: text })}
-          error={errors.address}
-          editable={!loading}
+          isIconLeft={ true }
+          leftIconName={ 'location' }
+          isIconRight={ true }
+          rightIconName={ 'locate' }
+          style={ s.addressInput }
+          wrapperStyle={ s.addressInputWrapperStyle }
+          value={ formData.address }
+          onChangeText={ ( text ) => setFormData( { ...formData, address: text } ) }
+          error={ errors.address }
+          editable={ !loading }
         />
-        {/* <View style={s.topBorder} /> */}
+        {/* <View style={s.topBorder} /> */ }
         <Input
-          returnKeyType={'done'}
+          returnKeyType={ 'done' }
           placeholder='Queue Description'
-          isIconLeft={true}
-          leftIconName={'create'}
-          multiline={true}
-          numberOfLines={5}
-          style={s.queueInput}
-          iconStyle={s.iconInput}
-          wrapperStyle={[s.addressInputWrapperStyle]}
-          value={formData.description}
-          onChangeText={(text) => setFormData({ ...formData, description: text })}
-          error={errors.description}
-          editable={!loading}
+          isIconLeft={ true }
+          leftIconName={ 'create' }
+          multiline={ true }
+          numberOfLines={ 5 }
+          style={ s.queueInput }
+          iconStyle={ s.iconInput }
+          wrapperStyle={ [ s.addressInputWrapperStyle ] }
+          value={ formData.description }
+          onChangeText={ ( text ) => setFormData( { ...formData, description: text } ) }
+          error={ errors.description }
+          editable={ !loading }
         />
         <Button
           ButtonText='Submit'
-          style={[s.btn, AppStyles.btnStyle]}
-          animationStyle={[s.btn, AppStyles.btnStyle]}
-          isIconRight={true}
-          rightIconName={'arrow-forward'}
-          onPress={onSubmit}
-          isLoading={loading}
-          disabled={loading}
+          style={ [ s.btn, AppStyles.btnStyle ] }
+          animationStyle={ [ s.btn, AppStyles.btnStyle ] }
+          isIconRight={ true }
+          rightIconName={ 'arrow-forward' }
+          onPress={ onSubmit }
+          isLoading={ loading }
+          disabled={ loading }
         />
       </ScrollableAvoidKeyboard>
     </SafeAreaView>
   );
 };
 
-Step1.navigationOptions = ({ navigation }) => {
-  return NavigationOptions({
+Step1.navigationOptions = ( { navigation } ) => {
+  return NavigationOptions( {
     title: '',
     isBack: true,
     navigation: navigation,
     headerStyle: { elevation: 0 },
-  });
+  } );
 };
 
-const s = StyleSheet.create({
+const s = StyleSheet.create( {
   firstFormWrapper: {
-    marginTop: verticalScale(30),
+    marginTop: verticalScale( 30 ),
   },
   topBorder: {
     borderWidth: 0.5,
     borderColor: colors.lightWhite,
-    marginTop: scale(30),
-    marginHorizontal: scale(15),
+    marginTop: scale( 30 ),
+    marginHorizontal: scale( 15 ),
   },
   dateWrapper: {
-    marginTop: verticalScale(30),
+    marginTop: verticalScale( 30 ),
   },
   dateTextHeader: {
     textAlign: 'center',
   },
   DatePickerWrapper: {
     flexDirection: 'row',
-    marginTop: verticalScale(15),
+    marginTop: verticalScale( 15 ),
     justifyContent: 'space-around',
   },
   DatePicker: {
-    marginRight: scale(120),
+    marginRight: scale( 120 ),
   },
   containerStyle: {
-    marginLeft: scale(5),
+    marginLeft: scale( 5 ),
     flex: 1,
   },
   dateText: {
     color: colors.white,
-    fontSize: scale(14),
-    marginTop: verticalScale(5),
+    fontSize: scale( 14 ),
+    marginTop: verticalScale( 5 ),
     textAlign: 'center',
   },
   tokenWrapper: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: verticalScale(20),
+    marginTop: verticalScale( 20 ),
     justifyContent: 'center',
     borderRadius: borderRadius,
   },
   tokenOption: {
     width: '45%',
-    paddingHorizontal: scale(20),
-    marginTop: verticalScale(10),
-    marginHorizontal: scale(5),
+    paddingHorizontal: scale( 20 ),
+    marginTop: verticalScale( 10 ),
+    marginHorizontal: scale( 5 ),
     borderWidth: 1,
     borderColor: colors.white,
     borderRadius: borderRadius,
   },
   tokenNumberText: {
-    marginTop: verticalScale(7),
+    marginTop: verticalScale( 7 ),
     textAlign: 'center',
   },
   wrapperStyle: {
-    marginTop: verticalScale(10),
-    marginHorizontal: scale(25),
+    marginTop: verticalScale( 10 ),
+    marginHorizontal: scale( 25 ),
   },
   inputPlaceholder: {
     textAlign: 'center',
     color: colors.white,
   },
   secondPickerContainerStyle: {
-    marginTop: verticalScale(10),
-    marginLeft: scale(-7),
+    marginTop: verticalScale( 10 ),
+    marginLeft: scale( -7 ),
   },
   deskDetailsWrapper: {
-    marginTop: verticalScale(20),
-    marginHorizontal: scale(15),
+    marginTop: verticalScale( 20 ),
+    marginHorizontal: scale( 15 ),
   },
   deskDetailsHeader: {
     textAlign: 'center',
-    marginBottom: verticalScale(10),
+    marginBottom: verticalScale( 10 ),
   },
   deskDetailItem: {
-    marginBottom: verticalScale(10),
+    marginBottom: verticalScale( 10 ),
   },
   problemSolutionWrapper: {
-    marginTop: verticalScale(20),
-    marginHorizontal: scale(15),
+    marginTop: verticalScale( 20 ),
+    marginHorizontal: scale( 15 ),
   },
   sectionHeader: {
     textAlign: 'center',
-    marginBottom: verticalScale(10),
+    marginBottom: verticalScale( 10 ),
   },
   locationHeader: {
     textAlign: 'center',
-    marginTop: verticalScale(30),
+    marginTop: verticalScale( 30 ),
   },
   addressInput: {
     color: colors.white,
   },
   addressInputWrapperStyle: {
-    marginVertical: verticalScale(20),
+    marginVertical: verticalScale( 20 ),
   },
   queueInput: {
     color: colors.white,
@@ -629,21 +650,21 @@ const s = StyleSheet.create({
     paddingTop: 10,
   },
   btn: {
-    marginTop: verticalScale(20),
-    marginBottom: verticalScale(40),
+    marginTop: verticalScale( 20 ),
+    marginBottom: verticalScale( 40 ),
   },
   btnStyle: {
     backgroundColor: colors.primary,
-    marginHorizontal: scale(20),
-    marginTop: verticalScale(indent),
+    marginHorizontal: scale( 20 ),
+    marginTop: verticalScale( indent ),
     borderRadius: borderRadius,
   },
   errorText: {
     color: colors.red,
-    fontSize: scale(12),
-    marginTop: verticalScale(5),
-    marginLeft: scale(15),
+    fontSize: scale( 12 ),
+    marginTop: verticalScale( 5 ),
+    marginLeft: scale( 15 ),
   },
-});
+} );
 
 export default Step1;

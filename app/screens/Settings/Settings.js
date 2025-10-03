@@ -137,8 +137,6 @@
 // });
 
 // export default connect(mapStateToProps, { logout })(Settings);
-
-
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Image, Modal, Alert, PermissionsAndroid } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -149,7 +147,7 @@ import { borderRadius } from '@app/app/styles/dimensions';
 import screens from '../../constants/screens';
 import { connect } from 'react-redux';
 import { logout } from '@app/app/services/authService';
-import { checkToken, generateToken } from '@app/app/services/apiService';
+import { checkToken, generateToken, getCategories } from '@app/app/services/apiService';
 import { Button, Touchable } from '@app/app/components/Button';
 import ScrollableAvoidKeyboard from '@app/app/components/ScrollableAvoidKeyboard/ScrollableAvoidKeyboard';
 import TextView from '@app/app/components/TextView/TextView';
@@ -157,30 +155,58 @@ import Icon from '@app/app/components/Icon';
 import HeaderButton from '../../components/HeaderButton';
 import NavigationOptions from '@app/app/components/NavigationOptions';
 import QRCodeScanner from 'react-native-qrcode-scanner';
+import { QueueCategory } from '@app/app/data/raw';
 
-const Settings = (props) => {
-  const { user } = props.auth;
+import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 
-  const [isScanning, setIsScanning] = useState(false);
-  const [qrDetails, setQrDetails] = useState(null);
-  const [tokenDetails, setTokenDetails] = useState(null);
+const Settings = ( props ) => {
+  const { user } = props.auth || {};
+  const [ isScanning, setIsScanning ] = useState( false );
+  const [ qrDetails, setQrDetails ] = useState( null );
+  const [ tokenDetails, setTokenDetails ] = useState( null );
+  const [ categories, setCategories ] = useState( [] );
 
-  useEffect(() => {
-    props.navigation.setParams({ openDrawer: _openDrawer });
-  }, []);
+  useEffect( () => {
+    const fetchCategories = async () => {
+      try {
+        const res = await getCategories();
+        const list = res?.data?.map( ( c ) => ( {
+          text: c.name,
+          value: c.id,
+        } ) );
+        setCategories( list );
+      } catch ( err ) {
+        console.error( "Error fetching categories:", err );
+        setCategories( [] );
+      }
+    };
+    fetchCategories();
+  }, [] );
+
+const getCategoryName = (categoryId) => {
+  if (!categories || categoryId === null || categoryId === undefined) {
+    return 'Unknown Category';
+  }
+  const category = categories.find((cat) => cat.value === Number(categoryId));
+  return category ? category.text : 'Unknown Category';
+};
+
+  useEffect( () => {
+    props.navigation.setParams( { openDrawer: _openDrawer } );
+  }, [] );
 
   const onPressSignOut = async () => {
     try {
       await props.logout();
-      props.navigation.navigate(screens.Login);
-    } catch (error) {
-      console.error('Logout error:', error);
-      Alert.alert('Error', 'Failed to sign out');
+      props.navigation.navigate( screens.Login );
+    } catch ( error ) {
+      console.error( 'Logout error:', error );
+      Alert.alert( 'Error', 'Failed to sign out' );
     }
   };
 
   const onPressProfile = async () => {
-    props.navigation.navigate(screens.Profile);
+    props.navigation.navigate( screens.Profile );
   };
 
   const _openDrawer = () => {
@@ -189,203 +215,186 @@ const Settings = (props) => {
 
   const checkCameraPermission = async () => {
     try {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.CAMERA,
-        {
-          title: 'Camera Permission',
-          message: 'App needs access to your camera to scan QR codes',
-          buttonNeutral: 'Ask Me Later',
-          buttonNegative: 'Cancel',
-          buttonPositive: 'OK',
-        }
-      );
-      return granted === PermissionsAndroid.RESULTS.GRANTED;
-    } catch (err) {
-      console.warn(err);
+      const result = await check( PERMISSIONS.ANDROID.CAMERA );
+      if ( result === RESULTS.GRANTED ) return true;
+      const requestResult = await request( PERMISSIONS.ANDROID.CAMERA );
+      return requestResult === RESULTS.GRANTED;
+    } catch ( err ) {
+      console.warn( err );
       return false;
     }
   };
 
   const onPressScan = async () => {
     const hasPermission = await checkCameraPermission();
-    if (hasPermission) {
-      setIsScanning(true);
+    if ( hasPermission ) {
+      setIsScanning( true );
     } else {
-      Alert.alert('Permission Denied', 'Camera permission is required to scan QR codes.');
+      Alert.alert( 'Permission Denied', 'Camera permission is required to scan QR codes.' );
     }
   };
 
-  const onScanSuccess = async (e) => {
-
-    console.log("e",);
-    
+  const onScanSuccess = async ( e ) => {
     try {
+      if ( !e.data || e.data === 'undefined' ) {
+        throw new Error( 'Invalid QR code data: received undefined' );
+      }
       let qrData;
       try {
-        qrData = JSON.parse(e.data);
+        qrData = JSON.parse( e.data );
+        if ( !qrData.queueId || !qrData.category ) {
+          throw new Error( 'Queue ID or Category is missing in QR code data' );
+        }
       } catch {
-        Alert.alert('Scanned', `Scanned value: ${e.data}`);
-        setIsScanning(false);
-        return;
+        throw new Error( 'QR code data is not valid JSON' );
       }
 
-      setQrDetails(qrData);
-      setIsScanning(false);
-
-      const tokenCheckResponse = await checkToken({ queueId: qrData.queueId });
-      if (tokenCheckResponse.status === 'ok' && tokenCheckResponse.data) {
-        setTokenDetails(tokenCheckResponse.data);
+      setQrDetails( qrData );
+      setIsScanning( false );
+      const tokenCheckResponse = await checkToken( {
+        queueId: qrData.queueId,
+        categoryId: qrData.category,
+      } );
+      if ( tokenCheckResponse.status === 200 && tokenCheckResponse.data?.data ) {
+        setTokenDetails( tokenCheckResponse.data.data );
         Alert.alert(
           'Token Already Generated',
-          `You already have a token: ${tokenCheckResponse.data.tokenNumber}`
+          `You already have a token, your token number is ${ tokenCheckResponse.data.data.tokenNumber }`
         );
+        setQrDetails( null );
       } else {
-        const tokenResponse = await generateToken({ queueId: qrData.queueId });
-        if (tokenResponse.status === 'ok' && tokenResponse.data) {
-          setTokenDetails(tokenResponse.data);
-          Alert.alert(
-            'Token Generated',
-            `Token generated successfully: ${tokenResponse.data.tokenNumber}`
-          );
-        } else {
-          throw new Error('Failed to generate token');
-        }
+        Alert.alert( 'Token not found', 'Please press "Generate Token" to create a new token.' );
       }
-    } catch (error) {
-      console.error('Error processing QR code:', error);
-      Alert.alert('Error', error.message || 'Failed to process QR code or generate token');
-      setIsScanning(false);
+    } catch ( error ) {
+      console.error( 'Error processing QR code:', error.message, error.response?.data );
+      Alert.alert( 'Error', error.message || 'Failed to process QR code' );
+      setIsScanning( false );
     }
   };
+
+  const onPressGenerateToken = async () => {
+    try {
+      if ( !qrDetails ) {
+        Alert.alert( 'Error', 'No QR code data available. Please scan a QR code first.' );
+        return;
+      }
+      const tokenResponse = await generateToken( {
+        queueId: qrDetails.queueId,
+        categoryId: qrDetails.category,
+      } );
+      if ( tokenResponse.status === 'ok' && tokenResponse.data ) {
+        setTokenDetails( tokenResponse.data );
+        Alert.alert(
+          'Token Generated',
+          `Token generated successfully: ${ tokenResponse.data.tokenNumber }`
+        );
+        setQrDetails( null );
+      } else {
+        throw new Error( tokenResponse.message || 'Failed to generate token' );
+      }
+    } catch ( error ) {
+      console.error( 'Error generating token:', error.message, error.response?.data );
+      Alert.alert( 'Error', error.message || 'Failed to generate token' );
+    }
+  };
+  if ( !user ) {
+    Alert.alert( 'Error', 'User data not available' );
+    return null;
+  }
 
   return (
     <SafeAreaView
-      style={[AppStyles.root, AppStyles.rootWithoutPadding]}
-      forceInset={{ top: 'never', bottom: 'never' }}
+      style={ [ AppStyles.root, AppStyles.rootWithoutPadding ] }
+      forceInset={ { top: 'never', bottom: 'never' } }
     >
-      <ScrollableAvoidKeyboard showsVerticalScrollIndicator={false} keyboardShouldPersistTaps={'handled'}>
-        <Touchable onPress={onPressProfile} style={[s.profileMain, s.same]}>
+      <ScrollableAvoidKeyboard showsVerticalScrollIndicator={ false } keyboardShouldPersistTaps={ 'handled' }>
+        <Touchable onPress={ onPressProfile } style={ [ s.profileMain, s.same ] }>
           <View>
-            <Image source={require('../../assets/images/sProfile.png')} />
+            <Image source={ require( '../../assets/images/sProfile.png' ) } />
           </View>
-          <View style={s.profileTextMain}>
-            <TextView color={colors.white} text={user.name} type={'body'} style={s.profileText} />
-            <TextView color={colors.lightWhite} text={user.email} type={'body-one'} style={s.profileText} />
+          <View style={ s.profileTextMain }>
+            <TextView color={ colors.white } text={ user.name } type={ 'body' } style={ s.profileText } />
+            <TextView color={ colors.lightWhite } text={ user.email } type={ 'body-one' } style={ s.profileText } />
           </View>
         </Touchable>
 
-        <Touchable onPress={onPressScan} style={[s.scanMain, s.same]}>
-          <Icon name='scan-circle' color={colors.lightWhite} isFeather={false} />
-          <TextView color={colors.lightWhite} text={'Scan QR For Generate Token'} type={'body'} />
-          <Icon name='chevron-forward' color={colors.lightWhite} isFeather={false} />
+        <Touchable onPress={ onPressScan } style={ [ s.scanMain, s.same ] }>
+          <Icon name='scan-circle' color={ colors.lightWhite } isFeather={ false } />
+          <TextView color={ colors.lightWhite } text={ 'Scan QR For Generate Token' } type={ 'body' } />
+          <Icon name='chevron-forward' color={ colors.lightWhite } isFeather={ false } />
         </Touchable>
 
- {qrDetails && (
-  <View style={[s.qrDetails, s.same]}>
-    <TextView
-      color={colors.white}
-      text={`Queue Name: ${qrDetails.queueName}`}
-      type={'body'}
-      style={s.profileText}
-    />
-      <TextView
-      color={colors.white}
-      text={`category: ${qrDetails.category}`}
-      type={'body'}
-      style={s.profileText}
-    />
-    <TextView
-      color={colors.white}
-      text={`Queue ID: ${qrDetails.queueId}`}
-      type={'body'}
-      style={s.profileText}
-    />
-    <TextView
-      color={colors.white}
-      text={`QR Code Name: ${qrDetails.uniqueQrCodeName}`}
-      type={'body'}
-      style={s.profileText}
-    />
-    <TextView
-      color={colors.white}
-      text={`Token Range: ${qrDetails.tokenNumber}`}
-      type={'body'}
-      style={s.profileText}
-    />
-    {tokenDetails && (
-      <TextView
-        color={colors.white}
-        text={`Your Token: ${tokenDetails.tokenNumber}`}
-        type={'body'}
-        style={s.profileText}
-      />
-    )}
-    <View style={s.buttonContainer}>
-      <Button
-        onPress={async () => {
-          try {
-            // Check if a token already exists
-            const tokenCheckResponse = await checkToken({ queueId: qrDetails.queueId ,category:qrDetails.category});
-            if (tokenCheckResponse.status === 'ok' && tokenCheckResponse.data) {
-              setTokenDetails(tokenCheckResponse.data);
-              Alert.alert(
-                'Token Already Generated',
-                `You already have a token: ${tokenCheckResponse.data.tokenNumber}`
-              );
-              return;
-            }
-
-            // Generate a new token if none exists
-            const tokenResponse = await generateToken({ queueId: qrDetails.queueId });
-            if (tokenResponse.status === 'ok' && tokenResponse.data) {
-              setTokenDetails(tokenResponse.data);
-              Alert.alert(
-                'Token Generated',
-                `Token generated successfully: ${tokenResponse.data.tokenNumber}`
-              );
-            } else {
-              throw new Error(tokenResponse.message || 'Failed to generate token');
-            }
-          } catch (error) {
-            console.error('Error generating token:', error);
-            Alert.alert('Error', error.message || 'Failed to generate token');
-          }
-        }}
-        ButtonText="Generate Token"
-        style={[s.btn, s.generateBtn]}
-      />
-      <Button
-        onPress={() => {
-          setQrDetails(null);
-          setTokenDetails(null);
-        }}
-        ButtonText="Cancel"
-        style={[s.btn, s.cancelBtn]}
-      />
-    </View>
-  </View>
-)}
-        <View style={[s.rateMain, s.same]}>
-          <Touchable style={s.rate}>
-            <Icon name='star-sharp' color={colors.lightWhite} isFeather={false} style={s.rateLogo} />
-            <TextView color={colors.lightWhite} text={'Rate This App'} type={'body'} style={s.profileText} />
+        { qrDetails && (
+          <View style={ [ s.qrDetails, s.same ] }>
+            <TextView
+              color={ colors.white }
+              text={ `Queue Name: ${ qrDetails.queueName }` }
+              type={ 'body' }
+              style={ s.profileText }
+            />
+            <TextView
+              color={ colors.white }
+              text={ `Category: ${getCategoryName(qrDetails.category)}`}
+              type={ 'body' }
+              style={ s.profileText }
+            />
+            <TextView
+              color={ colors.white }
+              text={ `Queue ID: ${ qrDetails.queueId }` }
+              type={ 'body' }
+              style={ s.profileText }
+            />
+            <TextView
+              color={ colors.white }
+              text={ `Token Range: ${ qrDetails.tokenNumber }` }
+              type={ 'body' }
+              style={ s.profileText }
+            />
+            { tokenDetails && (
+              <TextView
+                color={ colors.white }
+                text={ `Your Token: ${ tokenDetails.tokenNumber }` }
+                type={ 'body' }
+                style={ s.profileText }
+              />
+            ) }
+            <View style={ s.buttonContainer }>
+              <Button
+                onPress={ onPressGenerateToken }
+                ButtonText="Generate Token"
+                style={ [ s.btn, s.generateBtn ] }
+              />
+              <Button
+                onPress={ () => {
+                  setQrDetails( null );
+                  setTokenDetails( null );
+                } }
+                ButtonText="Cancel"
+                style={ [ s.btn, s.cancelBtn ] }
+              />
+            </View>
+          </View>
+        ) }
+        <View style={ [ s.rateMain, s.same ] }>
+          <Touchable style={ s.rate }>
+            <Icon name='star-sharp' color={ colors.lightWhite } isFeather={ false } style={ s.rateLogo } />
+            <TextView color={ colors.lightWhite } text={ 'Rate This App' } type={ 'body' } style={ s.profileText } />
           </Touchable>
-          <Touchable style={[s.rate, s.help]}>
-            <Icon name='help-circle' color={colors.lightWhite} style={s.rateLogo} />
-            <TextView color={colors.lightWhite} text={'Help'} type={'body-one'} style={s.profileText} />
+          <Touchable style={ [ s.rate, s.help ] }>
+            <Icon name='help-circle' color={ colors.lightWhite } style={ s.rateLogo } />
+            <TextView color={ colors.lightWhite } text={ 'Help' } type={ 'body-one' } style={ s.profileText } />
           </Touchable>
         </View>
 
-        <Button onPress={onPressSignOut} ButtonText="Sign Out" style={s.btn} />
+        <Button onPress={ onPressSignOut } ButtonText="Sign Out" style={ s.btn } />
       </ScrollableAvoidKeyboard>
 
-      <Modal visible={isScanning} animationType="slide" onRequestClose={() => setIsScanning(false)}>
-        <SafeAreaView style={AppStyles.root}>
+      <Modal visible={ isScanning } animationType="slide" onRequestClose={ () => setIsScanning( false ) }>
+        <SafeAreaView style={ AppStyles.root }>
           <QRCodeScanner
-            onRead={onScanSuccess}
-            reactivate={true}
-            showMarker={true}
-            // flashMode={RNCamera.Constants.FlashMode.off}
+            onRead={ onScanSuccess }
+            reactivate={ true }
+            showMarker={ true }
           />
         </SafeAreaView>
       </Modal>
@@ -393,43 +402,43 @@ const Settings = (props) => {
   );
 };
 
-Settings.navigationOptions = ({ navigation }) => {
-  return NavigationOptions({
+Settings.navigationOptions = ( { navigation } ) => {
+  return NavigationOptions( {
     title: '',
     isBack: false,
     navigation: navigation,
     headerLeft: (
       <HeaderButton
-        type={1}
-        iconName={'md-menu'}
-        color={colors.primary}
-        isFeather={false}
-        iconType={'ionic'}
-        onPress={navigation.getParam('openDrawer')}
+        type={ 1 }
+        iconName={ 'md-menu' }
+        color={ colors.primary }
+        isFeather={ false }
+        iconType={ 'ionic' }
+        onPress={ navigation.getParam( 'openDrawer' ) }
       />
     ),
     headerStyle: { elevation: 0 },
-  });
+  } );
 };
 
-const s = StyleSheet.create({
+const s = StyleSheet.create( {
   same: {
     backgroundColor: colors.inputBackgroundColor,
-    marginHorizontal: scale(15),
-    marginTop: verticalScale(30),
-    paddingVertical: verticalScale(20),
+    marginHorizontal: scale( 15 ),
+    marginTop: verticalScale( 30 ),
+    paddingVertical: verticalScale( 20 ),
     borderRadius: borderRadius,
   },
   profileMain: {
     flexDirection: 'row',
-    paddingLeft: scale(15),
+    paddingLeft: scale( 15 ),
     alignItems: 'center',
   },
   profileTextMain: {
-    marginLeft: scale(15),
+    marginLeft: scale( 15 ),
   },
   profileText: {
-    marginTop: verticalScale(5),
+    marginTop: verticalScale( 5 ),
   },
   scanMain: {
     flexDirection: 'row',
@@ -437,31 +446,31 @@ const s = StyleSheet.create({
     justifyContent: 'space-around',
   },
   qrDetails: {
-    paddingHorizontal: scale(15),
+    paddingHorizontal: scale( 15 ),
   },
   rateMain: {
-    paddingLeft: verticalScale(15),
+    paddingLeft: verticalScale( 15 ),
   },
   rate: {
     flexDirection: 'row',
   },
   rateLogo: {
-    marginRight: scale(15),
+    marginRight: scale( 15 ),
   },
   help: {
-    marginTop: verticalScale(15),
+    marginTop: verticalScale( 15 ),
   },
   btn: {
     backgroundColor: colors.primary,
-    marginHorizontal: scale(30),
-    marginTop: verticalScale(20),
+    marginHorizontal: scale( 30 ),
+    marginTop: verticalScale( 20 ),
     borderRadius: borderRadius,
   },
-});
+} );
 
-const mapStateToProps = (state) => ({
+const mapStateToProps = ( state ) => ( {
   auth: state.auth,
   profile: state.profile,
-});
+} );
 
-export default connect(mapStateToProps, { logout })(Settings);
+export default connect( mapStateToProps, { logout } )( Settings );

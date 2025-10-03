@@ -55,7 +55,7 @@ import React, { useState, useEffect } from 'react';
 import {  FlatList, ActivityIndicator, Alert, Text, StyleSheet } from 'react-native';
 import NavigationOptions from '../../../components/NavigationOptions';
 import MyQueueListItem from './MyQueueListItem';
-import { getQueueList } from '@app/app/services/apiService'; // Adjust import path
+import { getCategories, getQueueList } from '@app/app/services/apiService'; // Adjust import path
 import screens from '../../../constants/screens';
 import { verticalScale } from 'react-native-size-matters';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -66,6 +66,24 @@ const MyQueue = ({ navigation, route }) => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+   const [ categories, setCategories ] = useState();
+  
+    useEffect( () => {
+      const fetchCategories = async () => {
+        try {
+          const res = await getCategories();
+          const list = res?.data?.map( ( c ) => ( {
+            text: c.name,
+            value: c.id,
+          } ) );
+          setCategories( list );
+        } catch ( err ) {
+          console.error( "Error fetching categories:", err );
+          setCategories( [] );
+        }
+      };
+      fetchCategories();
+    }, [] );
 
   const fetchQueueList = async () => {
     setLoading(true);
@@ -92,21 +110,34 @@ useEffect(() => {
 
 
 
-  const renderQueueItem = ({ item }) => (
+  const renderQueueItem = ({ item }) => {
+    console.log(item,"item");
+    
+  // Find category name from categories list
+  const categoryName =
+    categories?.find((c) => c.value.toString() === item.category.toString())?.text || 'Unknown Category';
+
+  return (
     <MyQueueListItem
       name={item.name || 'Unnamed Queue'}
-      category={item.category || 'Unknown Category'} // Use category from API
-      date={item.start_date ? new Date(item.start_date).toLocaleString('en-GB', {
-        day: '2-digit',     
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-      }) : 'No Date'}
+      category={categoryName} // show category name instead of id
+      date={
+        item.start_date
+          ? new Date(item.start_date).toLocaleString('en-GB', {
+              day: '2-digit',
+              month: 'short',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true,
+            })
+          : 'No Date'
+      }
       desks={item.noOfDesk || 0}
-      people={item.end_number - item.start_number + 1 || 0}
+      people={(item.end_number - item.start_number + 1) || 0}
     />
   );
+};
+
 
   if (loading) {
     return (

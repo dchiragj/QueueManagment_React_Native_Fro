@@ -15,12 +15,6 @@ const MyToken = (props) => {
     <SafeAreaView style={[AppStyles.root]}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <CompletedTokenListItem onPress={onPressMyTokenDetails} />
-        <CompletedTokenListItem />
-        <CompletedTokenListItem />
-        <CompletedTokenListItem />
-        <CompletedTokenListItem />
-        <CompletedTokenListItem />
-        <CompletedTokenListItem />
       </ScrollView>
     </SafeAreaView>
   );
