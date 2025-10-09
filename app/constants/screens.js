@@ -34,6 +34,7 @@ export default {
 
   MyQueueRoot: 'MyQueueRoot',
   MyQueue: 'MyQueue',
+  MyQueueDetail: 'MyQueueDetail',
   Step1: 'Step1',
   Step2: 'Step2',
   Step3: 'Step3',

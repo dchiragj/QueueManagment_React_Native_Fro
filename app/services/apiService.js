@@ -166,5 +166,36 @@ export const getTokenList = async () => {
   }
 };
 
+export const getQueueDetails = async (queueId) => {
+  try {
+    const response = await apiService.get( `/queue/details/${queueId}` );
+    return response.data;
+  } catch ( error ) {
+    throw new Error( error.response?.data?.message || 'Failed to get user profile' );
+  }
+};
+
+export const getTokenDelete = async (TokenId) => {
+  try {
+    const response = await apiService.delete( `/token/delete/${TokenId}` );
+    return response.data;
+  } catch ( error ) {
+    console.log(error,"error");
+    
+    throw new Error( error.response?.data?.message || 'Failed to get user profile' );
+  }
+};
+
+export const getQueueDelete = async (queueId) => {
+  try {
+    const response = await apiService.delete( `/queue/delete/${queueId}`);
+    return response.data;
+  } catch ( error ) {
+    console.log(error,"error");
+    
+    throw new Error( error.response?.data?.message || 'Failed to get user profile' );
+  }
+};
+
 // Add other API methods as needed
 export default apiService;

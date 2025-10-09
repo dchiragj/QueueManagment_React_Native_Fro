@@ -9,7 +9,7 @@ import CompletedTokenListItem from '../CompletedToken/CompletedTokenListItem';
 
 const MyToken = (props) => {
   const onPressMyTokenDetails = () => {
-    props.navigation.navigate(screens.MyTokenDetails);
+    // props.navigation.navigate(screens.MyTokenDetails);
   };
   return (
     <SafeAreaView style={[AppStyles.root]}>

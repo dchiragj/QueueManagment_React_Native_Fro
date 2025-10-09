@@ -167,19 +167,52 @@
 //   }
 // });
 // export default MyQueueListItem;
-
 import { Touchable } from '@app/app/components/Button';
 import Card from '@app/app/components/Card';
 import Icon from '@app/app/components/Icon';
+import Delete from 'react-native-vector-icons/MaterialIcons';
 import TextView from '@app/app/components/TextView/TextView';
 import { colors } from '@app/app/styles';
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, View, Alert } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+import AwesomeAlert from 'react-native-awesome-alerts';
 import SvgIcon from 'react-native-svg-icon/lib/components/SvgIcon';
 import svgs from '../../../assets/svg';
+import screens from '@app/app/constants/screens';
+import NavigationOptions from '../../../components/NavigationOptions';
+import { getQueueDelete } from '@app/app/services/apiService';
 
-const MyQueueListItem = ({ name, category, date, desks, people }) => {
+const MyQueueListItem = ({ name, category, date, desks, people, navigation, item, onDeleteQueue }) => {
+  const [showAlert, setShowAlert] = useState(false);
+  const [selectedQueueId, setSelectedQueueId] = useState(null);
+
+  const handleQueueDetails = () => {
+    if (navigation && item) {
+      const queueId = item.id || item._id;
+      if (queueId) {
+        navigation.navigate('MyQueueDetail', { queueId, category });
+      } else {
+        console.error('No valid queueId found in item', item);
+      }
+    } else {
+      console.error('Navigation prop or item is undefined', { navigation, item });
+    }
+  };
+
+  const handleDeleteQueue = async (queueId) => {
+    try {
+      await getQueueDelete(queueId);
+      if (onDeleteQueue) {
+        onDeleteQueue(queueId);
+      }
+      console.log('Queue deleted successfully at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
+    } catch (err) {
+      console.error('Failed to delete queue', err);
+      Alert.alert('Error', 'Failed to delete queue. Please try again.');
+    }
+  };
+
   return (
     <Card style={s.wrapper}>
       <Touchable style={[s.mainWrapper, s.touchableWrapper]}>
@@ -204,12 +237,54 @@ const MyQueueListItem = ({ name, category, date, desks, people }) => {
       </Touchable>
       <View style={s.topBorder} />
       <View style={s.linkTextWrapper}>
-        <TextView color={colors.primary} text={'Queue Detail'} type={'body-one'} style={s.TextLink} />
+        <Touchable onPress={handleQueueDetails}>
+          <TextView color={colors.primary} text={'Queue Detail'} type={'body-one'} style={s.TextLink} />
+        </Touchable>
         <TextView color={colors.primary} text={'Sign In-Desk'} type={'body-one'} style={s.TextLink} />
+        <Touchable
+          onPress={() => {
+            setSelectedQueueId(item.id || item._id);
+            setShowAlert(true);
+          }}
+        >
+          <Delete name="delete" size={30} color={colors.primary} />
+        </Touchable>
       </View>
+      <AwesomeAlert
+        show={showAlert}
+        showProgress={false}
+        title="Delete Queue?"
+        message="Are you sure you want to delete this queue?"
+        closeOnTouchOutside={false}
+        closeOnHardwareBackPress={false}
+        showCancelButton={true}
+        showConfirmButton={true}
+        cancelText="No"
+        confirmText="Yes, Delete it"
+        confirmButtonColor={colors.primary}
+        onCancelPressed={() => {
+          setShowAlert(false);
+          setSelectedQueueId(null);
+        }}
+        onConfirmPressed={() => {
+          if (selectedQueueId) {
+            handleDeleteQueue(selectedQueueId, onDeleteQueue);
+          }
+          setShowAlert(false);
+          setSelectedQueueId(null);
+        }}
+      />
     </Card>
   );
 };
+
+MyQueueListItem.navigationOptions = ({ navigation }) => ({
+  title: '',
+  headerLeft: null,
+  headerStyle: {
+    elevation: 0,
+  },
+});
 
 const s = StyleSheet.create({
   wrapper: {
@@ -246,6 +321,7 @@ const s = StyleSheet.create({
   linkTextWrapper: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    alignItems: 'center',
   },
   TextLink: {
     paddingVertical: verticalScale(10),

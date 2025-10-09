@@ -79,19 +79,22 @@
 // });
 // export default CompletedTokenListItem;
 
-
 import Card from '@app/app/components/Card';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import TextView from '@app/app/components/TextView/TextView';
-import { getCategories, getTokenList } from '@app/app/services/apiService';
+import { getCategories, getTokenDelete, getTokenList } from '@app/app/services/apiService';
 import { colors } from '@app/app/styles';
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { verticalScale, scale, moderateScale } from 'react-native-size-matters';
+import AwesomeAlert from 'react-native-awesome-alerts';
 
 const CompletedTokenListItem = ( props ) => {
   const [ tokens, setTokens ] = useState( [] );
   const [ error, setError ] = useState( null );
   const [ categories, setCategories ] = useState( [] );
+  const [ showAlert, setShowAlert ] = useState( false );
+  const [ selectedTokenId, setSelectedTokenId ] = useState( null );
 
   const fetchCategories = async () => {
     try {
@@ -127,7 +130,18 @@ const CompletedTokenListItem = ( props ) => {
     fetchTokens();
     fetchCategories();
   }, [] );
-
+  const handleDeleteToken = async ( tokenId ) => {
+    try {
+      await getTokenDelete( tokenId );
+      // Optimistically update the token list by removing the deleted token
+      setTokens( ( prevTokens ) =>
+        prevTokens.filter( ( token ) => token.id !== tokenId )
+      );
+    } catch ( err ) {
+      console.error( 'Failed to cancel token', err );
+      setError( 'Failed to cancel token. Please try again.' );
+    }
+  };
   const formatDate = ( dateString ) => {
     if ( !dateString ) return ""; // safety
 
@@ -141,7 +155,7 @@ const CompletedTokenListItem = ( props ) => {
       hour: "2-digit",
       minute: "2-digit",
       hour12: true,
-    });
+    } );
 
     return `${ day } ${ month } - ${ time }`;
   };
@@ -188,15 +202,52 @@ const CompletedTokenListItem = ( props ) => {
                 type="body-one"
               />
             </View>
-            <View style={ styles.tokenStatusWrapper }>
-              <View style={ styles.tokenStatusTriangle }></View>
-              <View style={ styles.tokenStatusRectangle }></View>
-              <TextView
-                color={ colors.white }
-                text={ token.status || 'Completed' }
-                type="body-one"
-                style={ styles.tokenStatusText }
-              />
+            <View style={ styles.deleteIconWrapper }>
+              <View>
+                <TouchableOpacity
+                  onPress={ () => {
+                    setSelectedTokenId( token.id ); 
+                    setShowAlert( true );          
+                  } }
+                >
+                  <Icon name="delete" size={ 30 } color={ colors.primary } />
+                </TouchableOpacity>
+                <AwesomeAlert
+                  show={ showAlert }
+                  showProgress={ false }
+                  title="Delete Token?"
+                  message="Are you sure you want to delete this token?"
+                  closeOnTouchOutside={false}
+                  closeOnHardwareBackPress={false}
+                  showCancelButton={true}
+                  showConfirmButton={ true }
+                  cancelText="No"
+                  confirmText="Yes, Delete it"
+                  confirmButtonColor={ colors.primary }
+                  onCancelPressed={ () => {
+                    setShowAlert( false );
+                    setSelectedTokenId( null );
+                  }}
+                  onConfirmPressed={ () => {
+                    if ( selectedTokenId ) {
+                      handleDeleteToken( selectedTokenId );
+                    }
+                    setShowAlert( false );
+                    setSelectedTokenId( null );
+                  }}
+                />
+              </View>
+
+              <View style={ styles.tokenStatusWrapper }>
+                <View style={ styles.tokenStatusTriangle }></View>
+                <View style={ styles.tokenStatusRectangle }></View>
+                <TextView
+                  color={ colors.white }
+                  text={ token.status }
+                  type="body-one"
+                  style={ styles.tokenStatusText }
+                />
+              </View>
             </View>
           </View>
         </Card>
@@ -227,6 +278,13 @@ const styles = StyleSheet.create( {
   textWrapper: {
     marginLeft: scale( 15 ),
     flex: 0.4,
+    flexGrow: 1
+  },
+  deleteIconWrapper: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    justifyContent: 'flex-end',
   },
   tokenStatusWrapper: {
     flex: 0.4,
@@ -234,6 +292,7 @@ const styles = StyleSheet.create( {
     position: 'relative',
     alignItems: 'flex-start',
     justifyContent: 'flex-end',
+    marginTop: 3,
   },
   tokenStatusTriangle: {
     borderLeftWidth: 15.5,
@@ -246,7 +305,7 @@ const styles = StyleSheet.create( {
     transform: [ { rotate: '270deg' } ],
   },
   tokenStatusRectangle: {
-    width: scale( 60 ),
+    width: scale( 80 ),
     backgroundColor: colors.primary,
     marginLeft: -7,
     height: verticalScale( 30 ),
@@ -254,6 +313,7 @@ const styles = StyleSheet.create( {
   tokenStatusText: {
     position: 'absolute',
     marginTop: verticalScale( 5 ),
+    padding: 2
   },
   errorText: {
     color: colors.lightWhite,
