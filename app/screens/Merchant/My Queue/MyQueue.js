@@ -47,7 +47,6 @@
 //   });
 // };
 // export default MyQueue;
-
 import HeaderButton from '@app/app/components/HeaderButton';
 import { colors } from '@app/app/styles';
 import AppStyles from '@app/app/styles/AppStyles';
@@ -102,7 +101,21 @@ const MyQueue = ({ navigation, route }) => {
         const uniqueNewQueues = params.queues.filter((q) => !queueData.some((existing) => existing.id === q.id));
         queueData = [...uniqueNewQueues, ...queueData];
       }
-      setQueues(queueData);
+
+      // Aggregate people count by category
+      const categoryCount = {};
+      queueData.forEach((queue) => {
+        const category = queue.category;
+        categoryCount[category] = (categoryCount[category] || 0) + 1; // Count number of queues per category
+      });
+
+      // Update queues with aggregated people count
+      const updatedQueues = queueData.map((queue) => ({
+        ...queue,
+        people: categoryCount[queue.category] || 0,
+      }));
+
+      setQueues(updatedQueues);
       filterQueues(activeTab);
     } catch (e) {
       console.error('Queue list fetch error:', e.message);
@@ -144,6 +157,7 @@ const MyQueue = ({ navigation, route }) => {
       <MyQueueListItem
         name={item.name || 'Unnamed Queue'}
         category={categoryName}
+        categoryid={item.category}
         date={
           item.start_date
             ? new Date(item.start_date).toLocaleString('en-GB', {
@@ -156,7 +170,7 @@ const MyQueue = ({ navigation, route }) => {
             : 'No Date'
         }
         desks={item.noOfDesk || 0}
-        people={(item.end_number - item.start_number + 1) || 0}
+        people={item.people || 0} // Use the aggregated people count
         navigation={navigation}
         item={item}
         status={statusLabel}

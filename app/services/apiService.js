@@ -196,6 +196,36 @@ export const getQueueDelete = async (queueId) => {
     throw new Error( error.response?.data?.message || 'Failed to get user profile' );
   }
 };
+export const getServicingList = async (queueId, categoryId) => {
+  try {
+    const response = await apiService.get(`/token/servicing/${queueId}?categoryId=${categoryId}`);
+    return response.data;
+  } catch (error) {
+    console.log(error, "error");
+    throw new Error(error.response?.data?.message || 'Failed to get servicing list');
+  }
+};
+export const getServicingSkip = async (tokenIds) => {
+  console.log(tokenIds, "tokenIds"); // Log the actual value for debugging
+  try {
+    const response = await apiService.post('/token/skip', { tokenIds }); // Send tokenIds in the body
+    return response.data;
+  } catch (error) {
+    console.log(error, "error");
+    throw new Error(error.response?.data?.message || 'Failed to get servicing list');
+  }
+};
+
+export const recoverSkippedToken = async (tokenNumber) => {
+  console.log(tokenIds, "tokenIds"); // Log the actual value for debugging
+  try {
+    const response = await apiService.post('/recover-token', { tokenNumber }); // Send tokenIds in the body
+    return response.data;
+  } catch (error) {
+    console.log(error, "error");
+    throw new Error(error.response?.data?.message || 'Failed to get servicing list');
+  }
+};
 
 // Add other API methods as needed
 export default apiService;

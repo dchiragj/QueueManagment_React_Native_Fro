@@ -167,6 +167,7 @@
 //   }
 // });
 // export default MyQueueListItem;
+
 import { Touchable } from '@app/app/components/Button';
 import Card from '@app/app/components/Card';
 import Icon from '@app/app/components/Icon';
@@ -183,7 +184,7 @@ import screens from '@app/app/constants/screens';
 import NavigationOptions from '../../../components/NavigationOptions';
 import { getQueueDelete } from '@app/app/services/apiService';
 
-const MyQueueListItem = ({ name, category, date, desks, people, navigation, item, onDeleteQueue }) => {
+const MyQueueListItem = ({ name, category, date, desks, people, navigation, item, onDeleteQueue ,categoryid}) => {
   const [showAlert, setShowAlert] = useState(false);
   const [selectedQueueId, setSelectedQueueId] = useState(null);
 
@@ -212,7 +213,13 @@ const MyQueueListItem = ({ name, category, date, desks, people, navigation, item
       Alert.alert('Error', 'Failed to delete queue. Please try again.');
     }
   };
-
+const handleSignInDesk = () => {
+  if (navigation && item) {
+    const queueId = item.id || item._id;
+    console.log('Navigating with queue:', queueId, categoryid);
+    navigation.navigate('Service', { queueId, categoryid });
+  }
+};
   return (
     <Card style={s.wrapper}>
       <Touchable style={[s.mainWrapper, s.touchableWrapper]}>
@@ -240,7 +247,10 @@ const MyQueueListItem = ({ name, category, date, desks, people, navigation, item
         <Touchable onPress={handleQueueDetails}>
           <TextView color={colors.primary} text={'Queue Detail'} type={'body-one'} style={s.TextLink} />
         </Touchable>
-        <TextView color={colors.primary} text={'Sign In-Desk'} type={'body-one'} style={s.TextLink} />
+          <Touchable onPress={handleSignInDesk}>
+          {/* <TextView color={colors.primary} text={'Sign In-Desk'} type={'body-one'} style={s.TextLink} /> */}
+          <TextView color={colors.primary} text={'Serving'} type={'body-one'} style={s.TextLink} />
+          </Touchable>
         <Touchable
           onPress={() => {
             setSelectedQueueId(item.id || item._id);

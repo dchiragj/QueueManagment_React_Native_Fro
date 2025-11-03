@@ -15,8 +15,6 @@ const MyQueueDetail = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  console.log('Queue ID in MyQueueDetail:', queueId, category);
-
   // Helper function to map status to label
   const getStatusLabel = (status) => {
     switch (status) {

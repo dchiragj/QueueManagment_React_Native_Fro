@@ -160,9 +160,6 @@ const CompletedTokenListItem = ( props ) => {
     return `${ day } ${ month } - ${ time }`;
   };
 
-
-
-
   // Function to get category name by categoryId
   const getCategoryName = ( categoryId ) => {
     if ( categoryId === null || categoryId === undefined ) {

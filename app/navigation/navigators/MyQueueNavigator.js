@@ -6,6 +6,7 @@ import Step4Screen from '../../screens/Merchant/CreateQueue/Step4';
 import { createStackNavigator } from 'react-navigation-stack';
 import screens from '../../constants/screens';
 import MyQueueDetail from '../../screens/Merchant/My Queue/MyQueueDetail';
+import Servicing from '@app/app/screens/Service/Servicing';
 
 const MyQueueNavigator = createStackNavigator(
   {
@@ -18,6 +19,10 @@ const MyQueueNavigator = createStackNavigator(
     [screens.MyQueueDetail]: {
       screen: MyQueueDetail,
       navigationOptions: () => ({ headerTitle: 'Queue Detail' })
+    },
+     [screens.Service]: {
+      screen: Servicing,
+      navigationOptions: () => ({ headerTitle: 'Serving' })
     },
     [screens.Step1]: {
       screen: Step1Screen,

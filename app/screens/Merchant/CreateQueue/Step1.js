@@ -201,7 +201,6 @@
 // });
 // export default Step1;
 // screens/Step1.js
-
 import TextView from '@app/app/components/TextView/TextView';
 import { colors } from '@app/app/styles';
 import React, { useEffect, useState } from 'react';
@@ -212,13 +211,14 @@ import AppStyles from '@app/app/styles/AppStyles';
 import FormGroup from '@app/app/components/FormGroup';
 import Input from '@app/app/components/Input';
 import { verticalScale, scale } from 'react-native-size-matters';
-import { SelectList } from 'react-native-dropdown-select-list'; // New import
-import { QueueCategory, Desks, Problems, Solutions } from '@app/app/data/raw';
+import { SelectList } from 'react-native-dropdown-select-list';
+import { Problems, Solutions } from '@app/app/data/raw';
 import DatePicker from '../../../components/DatePicker';
 import { borderRadius, indent } from '@app/app/styles/dimensions';
 import { Button } from '@app/app/components/Button';
 import screens from '../../../constants/screens';
-import { createQueue, getCategories, getQueueList } from '@app/app/services/apiService';
+import { createQueue, getCategories, getQueueList, getDesksByCategory } from '@app/app/services/apiService';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 const Step1 = ({ navigation }) => {
   const [formData, setFormData] = useState({
@@ -227,7 +227,6 @@ const Step1 = ({ navigation }) => {
     description: '',
     start_date: new Date(),
     end_date: null,
-    noOfDesk: null,
     start_number: 1,
     end_number: 50,
     address: '',
@@ -240,6 +239,7 @@ const Step1 = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [resError, setResError] = useState({});
   const [categories, setCategories] = useState([]);
+  const [desks, setDesks] = useState([]);
 
   const formatDateForSQL = (date) => {
     if (!date || !(date instanceof Date) || isNaN(date)) return null;
@@ -273,6 +273,9 @@ const Step1 = ({ navigation }) => {
       newErrors.end_number = 'End number must be greater than start number';
     }
     if (!formData.address) newErrors.address = 'Address is required';
+    // if (!formData.deskDetails || formData.deskDetails.length === 0) {
+    //   newErrors.deskDetails = 'At least one desk must be selected';
+    // }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -290,6 +293,7 @@ const Step1 = ({ navigation }) => {
         category: formData.category.toString(),
         start_date: formatDateForSQL(new Date(formData.start_date)),
         end_date: formatDateForSQL(new Date(formData.end_date)),
+        deskDetails: formData.deskDetails,
       };
       const response = await createQueue(payload);
 
@@ -331,26 +335,26 @@ const Step1 = ({ navigation }) => {
     }
   };
 
-  const handleNoOfDeskChange = (value) => {
-    const deskValue = parseInt(value);
-    const newDeskDetails = Array.from({ length: deskValue }, (_, i) => ({
-      username: `Desk ${i + 1}`,
-    }));
-    setFormData({ ...formData, noOfDesk: deskValue, deskDetails: newDeskDetails });
-  };
-
-  const updateDeskDetail = (index, username) => {
-    const newDeskDetails = [...formData.deskDetails];
-    newDeskDetails[index] = { ...newDeskDetails[index], username };
-    setFormData({ ...formData, deskDetails: newDeskDetails });
+  const fetchDesksByCategory = async (categoryId) => {
+    try {
+      const res = await getDesksByCategory(categoryId);
+      const deskList = res?.data?.map((desk) => ({
+        key: desk.id,
+        value: desk.name,
+      }));
+      setDesks(deskList);
+    } catch (err) {
+      console.error('Error fetching desks:', err);
+      setDesks([]);
+    }
   };
 
   const handledcategorylist = async () => {
     try {
       const res = await getCategories();
       const list = res?.data?.map((c) => ({
-        key: c.id, // Changed to 'key' for SelectList
-        value: c.name, // Changed to 'value' for SelectList
+        key: c.id,
+        value: c.name,
       }));
       setCategories(list);
       return list;
@@ -399,33 +403,40 @@ const Step1 = ({ navigation }) => {
           />
         </FormGroup>
         <FormGroup>
-          {/* <Picker
-            label={ null }
-            isPlaceholderItem={ true }
-            containerStyle={ s.fullborderBox }
-            data={ categories }
-            itemKeyField={ 'value' }
-            itemValueField={ 'text' }
-            isLeftIcon={ true }
-            leftIconName={ 'search' }
-            onValueChange={ ( value ) => { console.log( value, "value" ); setFormData( { ...formData, category: value } ); } }
-            value={ formData.category }
-            enabled={ !loading }
-          /> */}
           <SelectList
-            setSelected={(value) => setFormData({ ...formData, category: value })}
+            setSelected={(value) => {
+              setFormData({ ...formData, category: value });
+              fetchDesksByCategory(value);
+            }}
             data={categories}
-            save="key" 
+            save="key"
             placeholder="Select Category"
             boxStyles={[s.fullborderBox, { borderColor: colors.lightWhite, backgroundColor: colors.background }]}
             inputStyles={{ color: colors.white }}
             dropdownStyles={{ backgroundColor: colors.background, borderColor: colors.lightWhite }}
             dropdownTextStyles={{ color: colors.white }}
             disabled={loading}
-            searchicon={<Text style={{ color: colors.white, marginRight: scale(10) }}>🔍</Text>}
+            searchicon={<Icon name="search" size={20} color={colors.white} style={{ marginRight: scale(10) }} />}
           />
           {errors.category && <Text style={s.errorText}>{errors.category}</Text>}
         </FormGroup>
+        {/* {formData.category && desks.length > 0 && (
+          <FormGroup>
+            <SelectList
+              setSelected={(value) => setFormData({ ...formData, deskDetails: [{ username: desks.find(d => d.key === value)?.value || '' }] })}
+              data={desks}
+              save="key"
+              placeholder="Select Desk"
+              boxStyles={[s.fullborderBox, { borderColor: colors.lightWhite, backgroundColor: colors.background }]}
+              inputStyles={{ color: colors.white }}
+              dropdownStyles={{ backgroundColor: colors.background, borderColor: colors.lightWhite }}
+              dropdownTextStyles={{ color: colors.white }}
+              disabled={loading}
+              searchicon={<Icon name="search" size={20} color={colors.white} style={{ marginRight: scale(10) }} />}
+            />
+            {errors.deskDetails && <Text style={s.errorText}>{errors.deskDetails}</Text>}
+          </FormGroup>
+        )} */}
         <View style={s.topBorder} />
         <View style={s.dateWrapper}>
           <TextView
@@ -481,29 +492,6 @@ const Step1 = ({ navigation }) => {
             />
           </View>
         </View>
-        {formData.noOfDesk > 0 && (
-          <View style={s.deskDetailsWrapper}>
-            <TextView
-              style={s.deskDetailsHeader}
-              text={'Desk Details'}
-              type={'body-one'}
-              isTextColorWhite={true}
-            />
-            {formData.deskDetails.map((desk, index) => (
-              <FormGroup key={index} style={s.deskDetailItem}>
-                <Input
-                  returnKeyType={'next'}
-                  placeholder={`Desk ${index + 1} Username`}
-                  value={desk.username}
-                  onChangeText={(text) => updateDeskDetail(index, text)}
-                  error={errors.deskDetails}
-                  editable={!loading}
-                />
-              </FormGroup>
-            ))}
-            {errors.deskDetails && <Text style={s.errorText}>{errors.deskDetails}</Text>}
-          </View>
-        )}
         <View style={s.topBorder} />
         <TextView
           style={s.locationHeader}
@@ -626,29 +614,6 @@ const s = StyleSheet.create({
     textAlign: 'center',
     color: colors.white,
   },
-  secondPickerContainerStyle: {
-    marginTop: verticalScale(10),
-    marginLeft: scale(-7),
-  },
-  deskDetailsWrapper: {
-    marginTop: verticalScale(20),
-    marginHorizontal: scale(15),
-  },
-  deskDetailsHeader: {
-    textAlign: 'center',
-    marginBottom: verticalScale(10),
-  },
-  deskDetailItem: {
-    marginBottom: verticalScale(10),
-  },
-  problemSolutionWrapper: {
-    marginTop: verticalScale(20),
-    marginHorizontal: scale(15),
-  },
-  sectionHeader: {
-    textAlign: 'center',
-    marginBottom: verticalScale(10),
-  },
   locationHeader: {
     textAlign: 'center',
     marginTop: verticalScale(30),
@@ -687,8 +652,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.lightWhite,
     borderRadius: borderRadius,
-    // marginHorizontal: scale(25),
-    paddingVertical :scale(22)
+    paddingVertical: scale(22),
   },
 });
 

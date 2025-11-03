@@ -4,7 +4,8 @@ import {
   MyTokenNavigator,
   CompletedTokenNavigator,
   SettingsNavigator,
-  MyQueueNavigator
+  MyQueueNavigator,
+  ServiceNavigator
 } from '../navigators';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import screens from '@app/app/constants/screens';
@@ -42,6 +43,13 @@ const RootRoutes = {
     screen: MyQueueNavigator,
     navigationOptions: () => ({
       drawerLabel: 'My Queue',
+      drawerIcon: ({ tintColor }) => <MaterialIcons name='shopping-bag' size={24} color={tintColor} />
+    })
+  },
+   [screens.Service]: {
+    screen: ServiceNavigator,
+    navigationOptions: () => ({
+      drawerLabel: 'Servicing',
       drawerIcon: ({ tintColor }) => <MaterialIcons name='shopping-bag' size={24} color={tintColor} />
     })
   }
