@@ -217,9 +217,8 @@ export const getServicingSkip = async (tokenIds) => {
 };
 
 export const recoverSkippedToken = async (tokenNumber) => {
-  console.log(tokenIds, "tokenIds"); // Log the actual value for debugging
   try {
-    const response = await apiService.post('/recover-token', { tokenNumber }); // Send tokenIds in the body
+    const response = await apiService.post('/token/recover-token', { tokenNumber });
     return response.data;
   } catch (error) {
     console.log(error, "error");
@@ -227,5 +226,23 @@ export const recoverSkippedToken = async (tokenNumber) => {
   }
 };
 
+export const getSkippedList = async (queueId, categoryId) => {
+  try {
+    const response = await apiService.get(`/token/skippedTokens/${queueId}?categoryId=${categoryId}`);
+    return response.data;
+  } catch (error) {
+    console.log(error, "error");
+    throw new Error(error.response?.data?.message || 'Failed to get servicing list');
+  }
+};
+export const getTokenCounts = async (queueId, categoryId) => {
+  try {
+    const response = await apiService.get(`/token/token-counts/count`);
+    return response.data.data;
+  } catch (error) {
+    console.log(error, "error");
+    throw new Error(error.response?.data?.message || 'Failed to get servicing list');
+  }
+};
 // Add other API methods as needed
 export default apiService;

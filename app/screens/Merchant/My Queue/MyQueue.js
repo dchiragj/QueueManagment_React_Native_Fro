@@ -54,22 +54,22 @@ import React, { useState, useEffect } from 'react';
 import { FlatList, ActivityIndicator, Alert, Text, StyleSheet, View, TouchableOpacity } from 'react-native';
 import NavigationOptions from '../../../components/NavigationOptions';
 import MyQueueListItem from './MyQueueListItem';
-import { getCategories, getQueueList } from '@app/app/services/apiService';
+import { getCategories, getQueueList, getTokenCounts } from '@app/app/services/apiService';
 import screens from '../../../constants/screens';
 import { verticalScale } from 'react-native-size-matters';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const MyQueue = ({ navigation, route }) => {
+const MyQueue = ( { navigation, route } ) => {
   const params = navigation.state?.params || {};
-  const [queues, setQueues] = useState(params.queues || []);
-  const [filteredQueues, setFilteredQueues] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [categories, setCategories] = useState([]);
-  const [activeTab, setActiveTab] = useState('all');
+  const [ queues, setQueues ] = useState( params.queues || [] );
+  const [ filteredQueues, setFilteredQueues ] = useState( [] );
+  const [ loading, setLoading ] = useState( true );
+  const [ error, setError ] = useState( null );
+  const [ categories, setCategories ] = useState( [] );
+  const [ activeTab, setActiveTab ] = useState( 'all' );
 
-  const getStatusLabel = (status) => {
-    switch (status) {
+  const getStatusLabel = ( status ) => {
+    switch ( status ) {
       case 1:
         return 'running';
       case 2:
@@ -82,200 +82,205 @@ const MyQueue = ({ navigation, route }) => {
   const fetchCategories = async () => {
     try {
       const res = await getCategories();
-      const list = res?.data?.map((c) => ({ text: c.name, value: c.id }));
-      setCategories(list);
-    } catch (err) {
-      console.error('Error fetching categories:', err);
-      setCategories([]);
+      const list = res?.data?.map( ( c ) => ( { text: c.name, value: c.id } ) );
+      setCategories( list );
+    } catch ( err ) {
+      console.error( 'Error fetching categories:', err );
+      setCategories( [] );
     }
   };
 
   const fetchQueueList = async () => {
-    setLoading(true);
-    setError(null);
+    setLoading( true );
+    setError( null );
     try {
-      const response = await getQueueList();
-      let queueData = response.data || [];
-      queueData.sort((a, b) => new Date(b.start_date || b.created_at || 0) - new Date(a.start_date || a.created_at || 0));
-      if (params.queues?.length > 0) {
-        const uniqueNewQueues = params.queues.filter((q) => !queueData.some((existing) => existing.id === q.id));
-        queueData = [...uniqueNewQueues, ...queueData];
+      const queueRes = await getQueueList();
+      let queueData = queueRes.data || [];
+
+      const tokenData = await getTokenCounts();
+
+      const tokenMap = {};
+      tokenData.forEach( t => {
+        tokenMap[ t.id ] = t.tokenCount;
+      } );
+
+      queueData.sort( ( a, b ) =>
+        new Date( b.start_date || b.created_at || 0 ) -
+        new Date( a.start_date || a.created_at || 0 )
+      );
+
+      if ( params.queues?.length > 0 ) {
+        const unique = params.queues.filter( q => !queueData.some( x => x.id === q.id ) );
+        queueData = [ ...unique, ...queueData ];
       }
 
-      // Aggregate people count by category
-      const categoryCount = {};
-      queueData.forEach((queue) => {
-        const category = queue.category;
-        categoryCount[category] = (categoryCount[category] || 0) + 1; // Count number of queues per category
-      });
-
-      // Update queues with aggregated people count
-      const updatedQueues = queueData.map((queue) => ({
+      const updatedQueues = queueData.map( queue => ( {
         ...queue,
-        people: categoryCount[queue.category] || 0,
-      }));
+        tokenCount: tokenMap[ queue.id ] || 0
+      } ) );
 
-      setQueues(updatedQueues);
-      filterQueues(activeTab);
-    } catch (e) {
-      console.error('Queue list fetch error:', e.message);
-      setError(e.message || 'Unable to fetch queue list');
+      setQueues( updatedQueues );
+      filterQueues( activeTab );
+
+    } catch ( e ) {
+      console.error( 'Queue list fetch error:', e );
+      setError( e.message || 'Unable to fetch queue list' );
     } finally {
-      setLoading(false);
+      setLoading( false );
     }
   };
 
-  const filterQueues = (tab) => {
-    let updatedQueues = [...queues];
-    if (tab === 'all') {
-      setFilteredQueues(updatedQueues);
+  const filterQueues = ( tab ) => {
+    let updatedQueues = [ ...queues ];
+    if ( tab === 'all' ) {
+      setFilteredQueues( updatedQueues );
     } else {
       const tabStatus = tab === 'running' ? 1 : tab === 'cancel' ? 2 : null;
-      if (tabStatus !== null) {
-        setFilteredQueues(updatedQueues.filter((queue) => queue.status === tabStatus));
+      if ( tabStatus !== null ) {
+        setFilteredQueues( updatedQueues.filter( ( queue ) => queue.status === tabStatus ) );
       } else {
-        setFilteredQueues(updatedQueues);
+        setFilteredQueues( updatedQueues );
       }
     }
   };
 
-  useEffect(() => {
+  useEffect( () => {
     fetchCategories();
     fetchQueueList();
-  }, [params.queues]);
+  }, [ params.queues ] );
 
-  useEffect(() => {
-    filterQueues(activeTab);
-  }, [activeTab, queues]);
+  useEffect( () => {
+    filterQueues( activeTab );
+  }, [ activeTab, queues ] );
 
-  const renderQueueItem = ({ item }) => {
+  const renderQueueItem = ( { item } ) => {
     const categoryName =
-      categories?.find((c) => c.value.toString() === item.category.toString())?.text || 'Unknown Category';
-    const statusLabel = getStatusLabel(item.status);
+      categories?.find( ( c ) => c.value.toString() === item.category.toString() )?.text || 'Unknown Category';
+    const statusLabel = getStatusLabel( item.status );
 
     return (
       <MyQueueListItem
-        name={item.name || 'Unnamed Queue'}
-        category={categoryName}
-        categoryid={item.category}
+        name={ item.name || 'Unnamed Queue' }
+        category={ categoryName }
+        categoryid={ item.category }
         date={
           item.start_date
-            ? new Date(item.start_date).toLocaleString('en-GB', {
-                day: '2-digit',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true,
-              })
+            ? new Date( item.start_date ).toLocaleString( 'en-GB', {
+              day: '2-digit',
+              month: 'short',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true,
+            } )
             : 'No Date'
         }
-        desks={item.noOfDesk || 0}
-        people={item.people || 0} // Use the aggregated people count
-        navigation={navigation}
-        item={item}
-        status={statusLabel}
-        onDeleteQueue={fetchQueueList} // Pass the refresh function
+        desks={ item.noOfDesk || 0 }
+        people={ item.tokenCount || 0 }
+        navigation={ navigation }
+        item={ item }
+        status={ statusLabel }
+        onDeleteQueue={ fetchQueueList } // Pass the refresh function
       />
     );
   };
 
-  const renderTab = (tabName, label) => (
+  const renderTab = ( tabName, label ) => (
     <TouchableOpacity
-      style={[styles.tab, activeTab === tabName ? styles.activeTab : styles.inactiveTab]}
-      onPress={() => setActiveTab(tabName)}
+      style={ [ styles.tab, activeTab === tabName ? styles.activeTab : styles.inactiveTab ] }
+      onPress={ () => setActiveTab( tabName ) }
     >
-      <Text style={[styles.tabText, activeTab === tabName ? styles.activeTabText : styles.inactiveTabText]}>
-        {label}
+      <Text style={ [ styles.tabText, activeTab === tabName ? styles.activeTabText : styles.inactiveTabText ] }>
+        { label }
       </Text>
     </TouchableOpacity>
   );
 
-  if (loading) {
+  if ( loading ) {
     return (
-      <SafeAreaView style={[AppStyles.root]}>
-        <ActivityIndicator size="large" color={colors.primary} style={AppStyles.loading} />
+      <SafeAreaView style={ [ AppStyles.root ] }>
+        <ActivityIndicator size="large" color={ colors.primary } style={ AppStyles.loading } />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[AppStyles.root]}>
-      <View style={styles.tabContainer}>
-        {renderTab('all', 'All')}
-        {renderTab('running', 'Running')}
-        {renderTab('cancel', 'Cancel')}
+    <SafeAreaView style={ [ AppStyles.root ] }>
+      <View style={ styles.tabContainer }>
+        { renderTab( 'all', 'All' ) }
+        { renderTab( 'running', 'Running' ) }
+        { renderTab( 'cancel', 'Cancel' ) }
       </View>
 
       <FlatList
-        data={filteredQueues}
-        renderItem={renderQueueItem}
-        keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+        data={ filteredQueues }
+        renderItem={ renderQueueItem }
+        keyExtractor={ ( item ) => item.id?.toString() || Math.random().toString() }
         ListEmptyComponent={
           error ? (
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={ styles.errorText }>{ error }</Text>
           ) : (
-            <Text style={styles.noDataText}>No queues available</Text>
+            <Text style={ styles.noDataText }>No queues available</Text>
           )
         }
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={ styles.list }
+        showsVerticalScrollIndicator={ false }
       />
     </SafeAreaView>
   );
 };
 
-MyQueue.navigationOptions = ({ navigation }) => {
-  return NavigationOptions({
+MyQueue.navigationOptions = ( { navigation } ) => {
+  return NavigationOptions( {
     title: '',
     isBack: false,
     navigation: navigation,
     headerLeft: (
       <HeaderButton
-        type={1}
-        iconName={'md-menu'}
-        color={colors.primary}
-        isFeather={false}
-        iconType={'ionic'}
-        onPress={() => navigation.openDrawer()}
+        type={ 1 }
+        iconName={ 'md-menu' }
+        color={ colors.primary }
+        isFeather={ false }
+        iconType={ 'ionic' }
+        onPress={ () => navigation.openDrawer() }
       />
     ),
     headerRight: (
       <HeaderButton
-        type={1}
-        iconName={'add-circle'}
-        color={colors.primary}
-        isFeather={false}
-        iconType={'ionic'}
-        onPress={() => navigation.navigate(screens.Step1)}
+        type={ 1 }
+        iconName={ 'add-circle' }
+        color={ colors.primary }
+        isFeather={ false }
+        iconType={ 'ionic' }
+        onPress={ () => navigation.navigate( screens.Step1 ) }
       />
     ),
     headerStyle: { elevation: 0 },
-  });
+  } );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create( {
   list: {
-    paddingVertical: verticalScale(10),
+    paddingVertical: verticalScale( 10 ),
   },
   errorText: {
     color: colors.red,
     textAlign: 'center',
-    marginTop: verticalScale(20),
+    marginTop: verticalScale( 20 ),
   },
   noDataText: {
     color: colors.lightWhite,
     textAlign: 'center',
-    marginTop: verticalScale(20),
+    marginTop: verticalScale( 20 ),
   },
   tabContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: verticalScale(10),
+    paddingVertical: verticalScale( 10 ),
     backgroundColor: colors.backgroundColor,
   },
   tab: {
-    paddingVertical: verticalScale(8),
-    paddingHorizontal: verticalScale(16),
+    paddingVertical: verticalScale( 8 ),
+    paddingHorizontal: verticalScale( 16 ),
     borderRadius: 8,
   },
   activeTab: {
@@ -294,6 +299,6 @@ const styles = StyleSheet.create({
   inactiveTabText: {
     color: colors.black,
   },
-});
+} );
 
 export default MyQueue;
