@@ -90,6 +90,8 @@ import { verticalScale, scale, moderateScale } from 'react-native-size-matters';
 import AwesomeAlert from 'react-native-awesome-alerts';
 
 const CompletedTokenListItem = ( props ) => {
+  console.log(props,"props");
+  
   const [ tokens, setTokens ] = useState( [] );
   const [ error, setError ] = useState( null );
   const [ categories, setCategories ] = useState( [] );
@@ -115,7 +117,8 @@ const CompletedTokenListItem = ( props ) => {
       try {
         const response = await getTokenList();
         if ( response.data && Array.isArray( response.data.List ) ) {
-          setTokens( response.data.List );
+          const filtered = response.data.filter(t => t.status === 'COMPLETED');
+          setTokens( filtered );
         } else if ( Array.isArray( response.data ) ) {
           setTokens( response.data );
         } else {

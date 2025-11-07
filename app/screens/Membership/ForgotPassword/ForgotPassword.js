@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Alert, ScrollView } from 'react-native';
+import { StyleSheet, View, ScrollView } from 'react-native';
 import { scale, verticalScale } from 'react-native-size-matters';
 import { colors } from '@app/app/styles';
 import { borderRadius, indent, halfindent } from '@app/app/styles/dimensions';
@@ -8,6 +8,7 @@ import Input from '@app/app/components/Input';
 import Button from '@app/app/components/Button/Button';
 import Validation from '@app/app/components/Validation/Validation';
 import ScrollableAvoidKeyboard from '@app/app/components/ScrollableAvoidKeyboard/ScrollableAvoidKeyboard';
+import Toast from 'react-native-toast-message';
 import { forgotPassword, verifyOtp, resetPassword } from '@app/app/services/apiService';
 
 const ForgotPassword = ({ navigation }) => {
@@ -15,10 +16,11 @@ const ForgotPassword = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
 
+  // Reset fields when step changes
   useEffect(() => {
     if (step === 1) {
       setEmail('');
@@ -29,31 +31,44 @@ const ForgotPassword = ({ navigation }) => {
     }
   }, [step]);
 
+  /* -------------------------- Helper: Show Toast -------------------------- */
+  const showToast = (type, title, message) => {
+    Toast.show({
+      type,
+      text1: title,
+      text2: message,
+      position: 'top',
+      visibilityTime: 4000,
+    });
+  };
+
+  /* ---------------------------- Step 1: Send OTP -------------------------- */
   const handleSendOtp = async () => {
-    if (!email) {
-      Alert.alert('Error', 'Please enter your email');
+    if (!email?.trim()) {
+      showToast('error', 'Error', 'Please enter your email');
       return;
     }
 
     setLoading(true);
     try {
-      const data = await forgotPassword(email);
+      const data = await forgotPassword(email.trim());
       if (data?.status === 'ok') {
-        Alert.alert('Success', 'OTP sent to your email');
+        showToast('success', 'OTP Sent', 'Check your email for the code');
         setStep(2);
       } else {
-        Alert.alert('Error', data?.message || 'Something went wrong');
+        showToast('error', 'Failed', data?.message || 'Unable to send OTP');
       }
     } catch (err) {
-      Alert.alert('Error', err.message);
+      showToast('error', 'Error', err.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }
   };
 
+  /* --------------------------- Step 2: Verify OTP ------------------------- */
   const handleVerifyOtp = async () => {
-    if (!otp) {
-      Alert.alert('Error', 'Please enter the OTP');
+    if (!otp?.trim()) {
+      showToast('error', 'Error', 'Please enter the OTP');
       return;
     }
 
@@ -61,30 +76,31 @@ const ForgotPassword = ({ navigation }) => {
     try {
       const data = await verifyOtp(email, otp);
       if (data?.status === 'ok') {
-        Alert.alert('Success', 'OTP verified successfully');
+        showToast('success', 'Verified', 'OTP verified successfully');
         setUserId(data.userId);
         setStep(3);
       } else {
-        Alert.alert('Error', data?.message || 'Invalid OTP');
+        showToast('error', 'Invalid OTP', data?.message || 'Please try again');
       }
     } catch (err) {
-      Alert.alert('Error', err.message);
+      showToast('error', 'Error', err.message || 'Verification failed');
     } finally {
       setLoading(false);
     }
   };
 
+  /* ------------------------- Step 3: Reset Password ----------------------- */
   const handleResetPassword = async () => {
     if (!password || !confirmPassword) {
-      Alert.alert('Error', 'Please enter both password fields');
+      showToast('error', 'Error', 'Please fill both password fields');
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      showToast('error', 'Error', 'Passwords do not match');
       return;
     }
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      showToast('error', 'Error', 'Password must be at least 6 characters');
       return;
     }
 
@@ -92,22 +108,30 @@ const ForgotPassword = ({ navigation }) => {
     try {
       const data = await resetPassword(email, password, otp);
       if (data?.status === 'ok') {
-        Alert.alert('Success', 'Password updated successfully');
-        navigation.navigate('Login');
+        showToast('success', 'Success', 'Password updated successfully');
+        navigation.navigate('Login'); 
       } else {
-        Alert.alert('Error', data?.message || 'Failed to reset password');
+        showToast('error', 'Failed', data?.message || 'Could not reset password');
       }
     } catch (err) {
-      Alert.alert('Error', err.message);
+      showToast('error', 'Error', err.message || 'Reset failed');
     } finally {
       setLoading(false);
     }
   };
 
+  /* --------------------------------- UI --------------------------------- */
   return (
     <ScrollableAvoidKeyboard style={styles.container}>
-      <TextView text="Forgot Password" type="title" style={styles.title} color={colors.white} />
-      <ScrollView>
+      <TextView
+        text="Forgot Password"
+        type="title"
+        style={styles.title}
+        color={colors.white}
+      />
+
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* ---------- Step 1: Email ---------- */}
         {step === 1 && (
           <Validation>
             <Input
@@ -121,12 +145,13 @@ const ForgotPassword = ({ navigation }) => {
             />
             <Button
               onPress={handleSendOtp}
-              ButtonText={loading ? 'Please wait...' : 'Send OTP'}
+              ButtonText={loading ? 'Sending...' : 'Send OTP'}
               style={styles.btn}
               isLoading={loading}
             />
           </Validation>
         )}
+        {/* ---------- Step 2: OTP ---------- */}
         {step === 2 && (
           <Validation>
             <Input
@@ -139,18 +164,19 @@ const ForgotPassword = ({ navigation }) => {
             />
             <Button
               onPress={handleVerifyOtp}
-              ButtonText={loading ? 'Please wait...' : 'Verify OTP'}
+              ButtonText={loading ? 'Verifying...' : 'Verify OTP'}
               style={styles.btn}
               isLoading={loading}
             />
             <Button
               onPress={() => setStep(1)}
               ButtonText="Back"
-              style={[styles.btn, { backgroundColor: colors.gray }]}
+              style={[styles.btn, styles.backBtn]}
               disabled={loading}
             />
           </Validation>
         )}
+        {/* ---------- Step 3: Reset Password ---------- */}
         {step === 3 && (
           <Validation>
             <Input
@@ -171,14 +197,14 @@ const ForgotPassword = ({ navigation }) => {
             />
             <Button
               onPress={handleResetPassword}
-              ButtonText={loading ? 'Please wait...' : 'Reset Password'}
+              ButtonText={loading ? 'Resetting...' : 'Reset Password'}
               style={styles.btn}
               isLoading={loading}
             />
             <Button
               onPress={() => setStep(2)}
               ButtonText="Back"
-              style={[styles.btn, { backgroundColor: colors.gray }]}
+              style={[styles.btn, styles.backBtn]}
               disabled={loading}
             />
           </Validation>
@@ -189,10 +215,31 @@ const ForgotPassword = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: scale(20), backgroundColor: colors.backgroundColor },
-  title: { textAlign: 'center', paddingTop: 20, marginBottom: verticalScale(20) },
-  input: { marginLeft: scale(halfindent), color: colors.white, marginBottom: verticalScale(10) },
-  btn: { backgroundColor: colors.primary, marginHorizontal: scale(30), marginTop: verticalScale(indent), borderRadius: borderRadius },
+  container: {
+    flex: 1,
+    padding: scale(20),
+    backgroundColor: colors.backgroundColor,
+  },
+  title: {
+    textAlign: 'center',
+    paddingTop: 20,
+    marginBottom: verticalScale(20),
+  },
+  input: {
+    marginLeft: scale(halfindent),
+    color: colors.white,
+    marginBottom: verticalScale(10),
+  },
+  btn: {
+    backgroundColor: colors.primary,
+    marginHorizontal: scale(30),
+    marginTop: verticalScale(indent),
+    borderRadius: borderRadius,
+  },
+  backBtn: {
+    backgroundColor: colors.gray,
+    marginTop: verticalScale(10),
+  },
 });
 
 export default ForgotPassword;

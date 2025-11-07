@@ -3,12 +3,14 @@ import { StyleSheet, View, Text, TouchableOpacity, FlatList, Alert, ActivityIndi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppStyles from '@app/app/styles/AppStyles';
 import ScrollableAvoidKeyboard from '@app/app/components/ScrollableAvoidKeyboard/ScrollableAvoidKeyboard';
-import { getCategories, getQueueDetails, getServicingList, getServicingSkip, getSkippedList, recoverSkippedToken } from '@app/app/services/apiService';
+import { completeToken, getCategories, getCompletedHistory, getQueueDetails, getServicingList, getServicingSkip, getSkippedList, recoverSkippedToken } from '@app/app/services/apiService';
 import NavigationOptions from '@app/app/components/NavigationOptions';
 import HeaderButton from '@app/app/components/HeaderButton';
 import CheckBox from 'react-native-check-box';
 import { colors } from '@app/app/styles';
 import AsyncStorage from '@react-native-community/async-storage';
+import Toast from 'react-native-toast-message';
+import TextView from '@app/app/components/TextView/TextView';
 
 const Servicing = ( { navigation } ) => {
   const queueId = navigation.getParam( 'queueId' );
@@ -21,8 +23,18 @@ const Servicing = ( { navigation } ) => {
   const [ selected, setSelected ] = useState( [] );
   const [ lastRecords, setLastRecords ] = useState( [] );
   const [ categories, setCategories ] = useState( [] );
+  const [ completedHistory, setCompletedHistory ] = useState( [] );
   const [ loading, setLoading ] = useState( true );
 
+  const showToast = ( type, title, message ) => {
+    Toast.show( {
+      type,
+      text1: title,
+      text2: message,
+      position: 'top',
+      visibilityTime: 3000,
+    } );
+  };
   // Fetch Queue Data
   useEffect( () => {
     if ( queueId && categoryid ) {
@@ -30,11 +42,35 @@ const Servicing = ( { navigation } ) => {
       fetchSkippedData( queueId, categoryid );
     } else {
       console.error( 'Queue or category missing in params', { queueId, categoryid } );
-      Alert.alert( 'Error', 'Missing queue or category information.' );
+      showToast( 'error', 'Error', 'Missing queue or category information.' );
       setLoading( false );
     }
   }, [ queueId, categoryid ] );
 
+
+  useEffect( () => {
+    if ( !queueId || !categoryid ) return;
+
+    // First time load
+    fetchCompletedHistory();
+
+    // Auto refresh every 8 seconds
+    const interval = setInterval( () => {
+      fetchCompletedHistory();
+    }, 8000 );
+
+    return () => clearInterval( interval );
+  }, [ queueId, categoryid ] );
+  const fetchCompletedHistory = async () => {
+    try {
+      const res = await getCompletedHistory( queueId, categoryid );
+      if ( res ) {
+        setCompletedHistory( res.data );
+      }
+    } catch ( err ) {
+      console.log( 'History load failed' );
+    }
+  };
   const handledcategorylist = async () => {
     try {
       const res = await getCategories();
@@ -92,7 +128,7 @@ const Servicing = ( { navigation } ) => {
           setCustomers( [] );
           setLastIssued( 0 );
           setNowServing( 0 );
-          Alert.alert( 'Info', 'No active customers in queue.' );
+          showToast( 'info', 'No Customers', 'No active customers in queue.' );
           return;
         }
 
@@ -113,11 +149,11 @@ const Servicing = ( { navigation } ) => {
         setCustomers( [] );
         setLastIssued( 0 );
         setNowServing( 0 );
-        Alert.alert( 'Info', servicingData.message || 'No tokens found for servicing' );
+        showToast( 'info', 'Empty Queue', servicingData.message || 'No tokens found' );
       }
     } catch ( error ) {
       console.error( 'Fetch queue data error:', error );
-      Alert.alert( 'Error', error.message || 'Failed to load queue data. Please try again.' );
+      showToast( 'error', 'Error', error.message || 'Failed to load queue data' );
     } finally {
       setLoading( false );
     }
@@ -128,7 +164,6 @@ const Servicing = ( { navigation } ) => {
     const categoryMap = new Map( categoryList.map( cat => [ cat.key, cat.value ] ) );
     try {
       const response = await getSkippedList( queueId, categoryid );
-      console.log( response, "getskippeddata" );
       if ( response.status === 'ok' && response.data ) {
         const mappedCustomers = response.data.map( token => {
           const category =
@@ -155,78 +190,95 @@ const Servicing = ( { navigation } ) => {
 
     }
   };
-  const callNext = () => {
-    const sorted = [ ...customers ].sort( ( a, b ) => a.tokenNumber - b.tokenNumber );
-    const currentIndex = sorted.findIndex( c => c.tokenNumber === nowServing );
-    const next = sorted[ currentIndex + 1 ];
+ const callNext = async () => {
+  if (customers.length === 0) {
+    showToast('info', 'Empty', 'No customers in queue');
+    return;
+  }
 
-    if ( !next ) {
-      Alert.alert( 'Info', 'No more customers to serve.' );
-      return;
+  const current = customers.find(c => c.isActive);
+  if (!current) return;
+
+  try {
+    const res = await completeToken(current.id);
+    if (res.status !== 'ok') throw new Error(res.message);
+
+    // 1. Add to Completed History (SERVED)
+    setCompletedHistory(prev => [{
+      id: current.id,
+      tokenNumber: current.tokenNumber,
+      name: current.name,
+      service: current.service,
+      completedAt: new Date().toISOString()
+    }, ...prev]);
+
+    // 2. Remove from customers
+    const remaining = customers.filter(c => c.id !== current.id);
+
+    if (remaining.length > 0) {
+      const sorted = [...remaining].sort((a, b) => a.tokenNumber - b.tokenNumber);
+      const next = sorted[0];
+      setNowServing(next.tokenNumber);
+      setCustomers(sorted.map(c => ({
+        ...c,
+        isActive: c.tokenNumber === next.tokenNumber
+      })));
+    } else {
+      setCustomers([]);
+      setNowServing(0);
+      showToast('success', 'All Done!', 'Queue completed!');
     }
 
-    setNowServing( next.tokenNumber );
-    setCustomers( sorted.map( c => ( {
-      ...c,
-      isActive: c.tokenNumber === next.tokenNumber,
-    } ) ).slice( 0, 3 ) );
-  };
+    showToast('success', 'Served', `Token ${current.tokenNumber} completed`);
 
-  const skip = async () => {
-    if ( selected.length === 0 ) {
-      Alert.alert( 'Warning', 'Please select at least one customer to skip.' );
-      return;
+  } catch (err) {
+    showToast('error', 'Failed', err.message || 'Could not complete token');
+  }
+};
+
+const skip = async () => {
+  if (selected.length === 0) {
+    showToast('error', 'Selection Required', 'Please select at least one customer to skip.');
+    return;
+  }
+
+  try {
+    const data = await getServicingSkip(selected);
+    if (data.status !== 'ok') throw new Error(data.message || 'Failed to skip tokens');
+
+    const tokens = Array.isArray(data.data) ? data.data : [data.data];
+
+    // Add to lastRecords (only SKIPPED)
+    const skippedRecords = tokens.map(token => {
+      const customer = customers.find(c => c.id === token.id);
+      return {
+        tokenNumber: token.tokenNumber,
+        name: customer?.name || 'Unknown',
+        status: 'SKIPPED'
+      };
+    });
+
+    setLastRecords(prev => [...skippedRecords, ...prev].slice(-3));
+
+    // Remove from customers
+    setCustomers(prev => prev.filter(c => !selected.includes(c.id)));
+    setSelected([]);
+
+    // Update nowServing
+    const remaining = customers.filter(c => !selected.includes(c.id));
+    if (remaining.length > 0) {
+      const sorted = remaining.sort((a, b) => a.tokenNumber - b.tokenNumber);
+      setNowServing(sorted[0].tokenNumber);
+    } else {
+      setNowServing(0);
     }
 
-    let updatedRecords = [];
+    showToast('success', 'Skipped', `${selected.length} token(s) skipped.`);
 
-    try {
-      const data = await getServicingSkip( selected );
-      if ( data.status !== 'ok' ) {
-        throw new Error( data.message || 'Failed to skip tokens' );
-      }
-
-      const tokens = Array.isArray( data.data ) ? data.data : [ data.data ];
-      updatedRecords = [];
-
-      for ( const token of tokens ) {
-        const customer = customers.find( c => c.id === token.id );
-        updatedRecords.push( {
-          token: token.tokenNumber,
-          status: 'Skipped',
-          name: customer?.name || 'Unknown',
-        } );
-      }
-
-      // 1. Remove skipped tokens from customers list
-      setCustomers( prev => prev.filter( c => !selected.includes( c.id ) ) );
-      fetchSkippedData( queueId, categoryid );
-      // 2. Update Last 3 Records
-      // setLastRecords( prev => {
-      //   const newRecords = [ ...prev, ...updatedRecords ].slice( -3 );
-      //   AsyncStorage.setItem( LAST_RECORDS_KEY, JSON.stringify( newRecords ) ).catch( console.error );
-      //   return newRecords;
-      // } );
-
-      // 3. Update nowServing if needed
-      if ( customers.length > 0 ) {
-        const remaining = customers.filter( c => !selected.includes( c.id ) );
-        if ( remaining.length > 0 ) {
-          const sorted = remaining.sort( ( a, b ) => a.tokenNumber - b.tokenNumber );
-          setNowServing( sorted[ 0 ].tokenNumber );
-        } else {
-          setNowServing( 0 );
-        }
-      }
-
-      setSelected( [] );
-      Alert.alert( 'Success', `${ updatedRecords.length } token(s) skipped.` );
-
-    } catch ( error ) {
-      console.error( 'Skip error:', error.message );
-      Alert.alert( 'Error', error.message || 'Failed to skip selected tokens' );
-    }
-  };
+  } catch (error) {
+    showToast('error', 'Skip Failed', error.message || 'Could not skip tokens');
+  }
+};
 
   const recoverToken = async ( record ) => {
     try {
@@ -238,10 +290,10 @@ const Servicing = ( { navigation } ) => {
 
       fetchSkippedData( queueId, categoryid );
       fetchQueueData( queueId, categoryid );
-      Alert.alert( 'Success', `Token ${ record.tokenNumber } recovered!` );
+      showToast( 'success', 'Recovered', `Token ${ record.tokenNumber } recovered!` );
     } catch ( error ) {
       console.error( 'Recover error:', error );
-      Alert.alert( 'Error', error.message || 'Failed to recover token' );
+      showToast( 'error', 'Recover Failed', error.message || 'Could not recover token' );
     }
   };
 
@@ -291,8 +343,6 @@ const Servicing = ( { navigation } ) => {
   };
 
   const renderLastRecord = ( { item } ) => (
-    console.log( item, "recover-recor" ),
-
     <View style={ styles.lastRecord }>
       <Text style={ { color: '#fff', flex: 1 } }>
         Token { item.tokenNumber } - { item.status } ({ item.name })
@@ -302,9 +352,11 @@ const Servicing = ( { navigation } ) => {
           <Text style={ styles.recoverText }>Recover</Text>
         </TouchableOpacity>
       ) }
+      {/* { item.status === 'SERVED' && (
+        <Text style={ { color: '#4CAF50', fontWeight: 'bold' } }>Completed</Text>
+      ) } */}
     </View>
   );
-
   if ( loading ) {
     return (
       <SafeAreaView style={ [ AppStyles.root ] }>
@@ -334,21 +386,48 @@ const Servicing = ( { navigation } ) => {
           renderItem={ renderCustomer }
           keyExtractor={ item => item.id.toString() }
           style={ styles.list }
-          ListEmptyComponent={ <Text style={ styles.noCustomers }>No customers to serve</Text> }
+          ListEmptyComponent={ <Text style={ styles.noCustomers }>No customers to serve</Text>}
+          scrollEnabled={ false }
         />
 
         { lastRecords.length > 0 && (
           <View style={ styles.lastRecords }>
-            <Text style={ styles.recordsTitle }>Last 3 Records</Text>
+            <Text style={ styles.recordsTitle }>Skipped token</Text>
             <FlatList
               data={ lastRecords }
               renderItem={ renderLastRecord }
-              keyExtractor={ ( item, index ) => index.toString() }
+              keyExtractor={ ( item, index ) => index.toString()}
               style={ styles.recordList }
+              scrollEnabled={ false }
             />
           </View>
         ) }
-
+        { completedHistory.length > 0 && (
+          <View style={ styles.historySection }>
+            <Text style={ styles.historyTitle }>Completed History (Served Today)-{ completedHistory.length }</Text>
+            <FlatList
+              data={ completedHistory }
+              keyExtractor={ item => item.id.toString() }
+              scrollEnabled={ false }
+              renderItem={ ( { item } ) => {
+                return (
+                  <View style={ styles.historyItem }>
+                    <Text style={ styles.historyToken }>
+                      Token { item.tokenNumber } - { item.name }
+                    </Text>
+                    <Text style={ styles.historyTime }>
+                      Served at { new Date( item.completedAt ).toLocaleTimeString( 'en-IN', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      } ) }
+                    </Text>
+                  </View>
+                );
+              } }
+            />
+          </View>
+        ) }
         <View style={ styles.queuingControls }>
           <TouchableOpacity style={ styles.buttonGreen } onPress={ callNext }>
             <Text style={ styles.buttonText }>Next</Text>
@@ -356,9 +435,9 @@ const Servicing = ( { navigation } ) => {
           <TouchableOpacity style={ styles.buttonRed } onPress={ skip }>
             <Text style={ styles.buttonText }>Skip</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={ styles.buttonRed } onPress={ () => navigation.goBack() }>
+          {/* <TouchableOpacity style={ styles.buttonRed } onPress={ () => navigation.goBack() }>
             <Text style={ styles.buttonText }>Cancel</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </ScrollableAvoidKeyboard>
     </SafeAreaView>
@@ -378,6 +457,16 @@ Servicing.navigationOptions = ( { navigation } ) => {
         isFeather={ false }
         iconType={ 'ionic' }
         onPress={ () => navigation.openDrawer() }
+      />
+    ),
+     headerRight: (
+      <HeaderButton
+        type={ 1 }
+        iconName={ 'close-circle' }
+        color={ colors.primary }
+        isFeather={ false }
+        iconType={ 'ionic' }
+         onPress={() => navigation.goBack()}
       />
     ),
     headerStyle: { elevation: 0 },
@@ -477,7 +566,7 @@ const styles = StyleSheet.create( {
     padding: 10,
   },
   recordsTitle: {
-    color: '#fff',
+    color: colors.primary,
     fontSize: 18,
     fontWeight: 'bold',
     paddingHorizontal: 15,
@@ -538,6 +627,55 @@ const styles = StyleSheet.create( {
     flex: 1,
     alignItems: 'center',
   },
-} );
+  historySection: {
+    marginTop: 20,
+    paddingHorizontal: 15,
+    // backgroundColor: '#111',
+  },
+  historyTitle: {
+    color: colors.primary,
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  historyItem: {
+    backgroundColor: '#222',
+    padding: 12,
+    marginVertical: 4,
+    borderRadius: 10,
+    borderLeftWidth: 2.5,
+    borderLeftColor: colors.primary,
+  },
+  historyToken: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  historyTime: {
+    color: '#4CAF50',
+    fontSize: 11,
+    marginTop: 4,
+  },
+  buttonGray: {
+    backgroundColor: '#666',
+    padding: 15,
+    borderRadius: 8,
+    flex: 1,
+    marginHorizontal: 5,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#d32f2f',
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  cancelText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+});
 
 export default Servicing;

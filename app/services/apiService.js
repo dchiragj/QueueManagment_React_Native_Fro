@@ -244,5 +244,27 @@ export const getTokenCounts = async (queueId, categoryId) => {
     throw new Error(error.response?.data?.message || 'Failed to get servicing list');
   }
 };
+
+export const completeToken = async (tokenId) => {
+  try {
+    const payload = Array.isArray(tokenId) 
+      ? { tokenIds: tokenId } 
+      : { tokenId };
+    const response = await apiService.post('/token/complete', payload);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+export const getCompletedHistory = async (queueId, categoryId) => {
+  try {
+    const response = await apiService.get(`/token/completed/history`, {
+      params: { queueId, categoryId }
+    });
+    return response.data.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
 // Add other API methods as needed
 export default apiService;

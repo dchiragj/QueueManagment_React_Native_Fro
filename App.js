@@ -13,6 +13,7 @@ import { AppNavigator } from './app/navigation';
 import { colors } from './app/styles';
 import store from './app/store/store';
 import AppStyles from './app/styles/AppStyles';
+import Toast from 'react-native-toast-message';
 
 function App() {
   useEffect(() => {
@@ -26,6 +27,7 @@ function App() {
       <Provider store={store}>
         <AppNavigator />
       </Provider>
+      <Toast />
       {/* <OfflineNotice /> */}
     </View>
   );

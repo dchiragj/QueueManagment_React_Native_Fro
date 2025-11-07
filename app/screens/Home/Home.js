@@ -18,6 +18,7 @@ import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import { checkToken, generateToken, getCategories } from '@app/app/services/apiService';
 import { Button } from '@app/app/components/Button';
 import Card from '@app/app/components/Card';
+import Toast from 'react-native-toast-message';
 
 function Home( props ) {
   const [ isScanning, setIsScanning ] = useState( false );
@@ -59,7 +60,16 @@ function Home( props ) {
   const onPressHome = () => {
     props.navigation.navigate( screens.Categories );
   };
-
+const showToast = (type, title, message) => {
+    Toast.show({
+      type,
+      text1: title,
+      text2: message,
+      position: 'top',
+      visibilityTime: 3000,
+      topOffset: 60,
+    });
+  };
   const checkCameraPermission = async () => {
     try {
       const permission = Platform.OS === 'ios' ? PERMISSIONS.IOS.CAMERA : PERMISSIONS.ANDROID.CAMERA;
@@ -67,19 +77,17 @@ function Home( props ) {
       if ( result === RESULTS.GRANTED ) return true;
       const requestResult = await request( permission );
       if ( requestResult !== RESULTS.GRANTED ) {
-        Alert.alert( 'Permission Denied', 'Camera permission is required to scan QR codes.' );
+       showToast('error', 'Permission Denied', 'Camera access is required to scan QR codes.');
       }
       return requestResult === RESULTS.GRANTED;
     } catch ( err ) {
       console.error( 'Permission check error:', err );
-      Alert.alert( 'Error', 'Failed to check camera permission.' );
+     showToast('error', 'Error', 'Failed to check camera permission.');
       return false;
     }
   };
 
   const onPressScan = async () => {
-    console.log( "test" );
-
     setIsLoading( true );
     const hasPermission = await checkCameraPermission();
     setIsLoading( false );
@@ -111,17 +119,18 @@ function Home( props ) {
       } );
       if ( tokenCheckResponse.status === 200 && tokenCheckResponse.data?.data ) {
         setTokenDetails( tokenCheckResponse.data.data );
-        Alert.alert(
+        showToast(
+          'info',
           'Token Already Generated',
-          `You already have a token, your token number is ${ tokenCheckResponse.data.data.tokenNumber }`
+          `You already have a token, your token number is ${tokenCheckResponse.data.data.tokenNumber}`
         );
         setQrDetails( null );
       } else {
-        Alert.alert( 'Token not found', 'Please press "Generate Token" to create a new token.' );
+        showToast('info', 'No Token', 'Please press "Generate Token" to create a new token.');
       }
     } catch ( error ) {
       console.error( 'Error processing QR code:', error.message, error.response?.data );
-      Alert.alert( 'Error', error.message || 'Failed to process QR code' );
+     showToast('error', 'Scan Failed', error.message || 'Could not process QR code');
       setIsScanning( false );
     }
   };
@@ -138,16 +147,17 @@ function Home( props ) {
       } );
       if ( tokenResponse.status === 'ok' && tokenResponse.data ) {
         setTokenDetails( tokenResponse.data );
-        Alert.alert(
-          'Token Generated',
-          `Token generated successfully: ${ tokenResponse.data.tokenNumber }`
-        );
+        showToast(
+          'success',
+          'Token Generated!',
+          `Token generated successfully: ${tokenResponse.data.tokenNumber}`
+        )
         setQrDetails( null );
       } else {
         throw new Error( tokenResponse.message || 'Failed to generate token' );
       }
     } catch ( error ) {
-      console.error( 'Error generating token:', error.message, error.response?.data );
+      showToast('error', 'Failed', error.message || 'Could not generate token');
       Alert.alert( 'Error', error.message || 'Failed to generate token' );
     }
   };
@@ -180,12 +190,12 @@ function Home( props ) {
                   type="body"
                   style={ s.profileText }
                 />
-                <TextView
+                {/* <TextView
                   color={ colors.white }
                   text={ `Queue ID: ${ qrDetails.queueId }` }
                   type="body"
                   style={ s.profileText }
-                />
+                /> */}
                 <TextView
                   color={ colors.white }
                   text={ `Token Range: ${ qrDetails.tokenNumber }` }
@@ -275,6 +285,7 @@ const s = StyleSheet.create( {
     borderRadius: borderRadius,
   },
   qrDetails: {
+    paddingVertical:scale(15),
     // margin:"cem"
     display: 'flex',
     flexDirection: 'column',

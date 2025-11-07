@@ -46,13 +46,13 @@ const RootRoutes = {
       drawerIcon: ({ tintColor }) => <MaterialIcons name='shopping-bag' size={24} color={tintColor} />
     })
   },
-   [screens.Service]: {
-    screen: ServiceNavigator,
-    navigationOptions: () => ({
-      drawerLabel: 'Servicing',
-      drawerIcon: ({ tintColor }) => <MaterialIcons name='shopping-bag' size={24} color={tintColor} />
-    })
-  }
+  //  [screens.Service]: {
+  //   screen: ServiceNavigator,
+  //   navigationOptions: () => ({
+  //     drawerLabel: 'Servicing',
+  //     drawerIcon: ({ tintColor }) => <MaterialIcons name='shopping-bag' size={24} color={tintColor} />
+  //   })
+  // }
 };
 
 export default RootRoutes;

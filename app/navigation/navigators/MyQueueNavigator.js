@@ -14,7 +14,7 @@ const MyQueueNavigator = createStackNavigator(
       screen: MyQueueScreen,
       navigationOptions: () => ({
         headerTitle: 'My Queue'
-      })
+      }) 
     },
     [screens.MyQueueDetail]: {
       screen: MyQueueDetail,

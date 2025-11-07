@@ -15,13 +15,12 @@ import { saveToken, clearToken } from '../utils/authTokenHelpers';
 import { verificationcode, verifyEmailApi } from './apiService';
 const baseUrl = getBaseUrl();
 
-/**
+/**F
  * @desc Login - Get User Token
  * @param {*} obj Data Obj
  */
 export const login = (obj) => async (dispatch) => {
   try {``
-    alert(`apiUrl: ${baseUrl}/auth/login`);
     dispatch(clearAuthResponseMsg());
     if (!obj) {
       dispatchAuthError('username', 'Email is Required', dispatch);
@@ -42,15 +41,10 @@ export const login = (obj) => async (dispatch) => {
   const response = await axios.post(`${baseUrl}/auth/login`, obj);
 
     const { data } = response.data;
-      console.log("data------>",data);
+      // console.log("data------>",data);
     dispatch(setLoginToken(data));
     return true;
   } catch (e) {
-    console.error(e);
-    
-    console.log("error", e);
-
-    alert(`apiErr: ${e}`);
     dispatchAuthError('error', getAPIResponseError(e) || 'Unable to login please try again', dispatch);
     return false;
   } finally {
@@ -64,7 +58,6 @@ export const login = (obj) => async (dispatch) => {
  */
 export const signup = (obj) => async (dispatch) => {
   try {
-    alert(`apiUrl: ${baseUrl}/auth/signup`);
     dispatch(clearAuthResponseMsg());
     if (!obj) {
       dispatchAuthError('role', 'Select role', dispatch);
@@ -106,7 +99,6 @@ export const signup = (obj) => async (dispatch) => {
     dispatch(setLoginToken(data));
     return true;
   } catch (e) {
-    alert(`apiErr-signup: ${e}`);
     dispatchAuthError('error', getAPIResponseError(e) || 'Unable to signup, please try again', dispatch);
     return false;
   } finally {
@@ -158,11 +150,8 @@ export const verifyEmail = (code) => async (dispatch) => {
 
     // 👇 This automatically attaches the token via interceptor
     const data = await verifyEmailApi(code);
-
-    alert(JSON.stringify(data),"data");
     return true;
   } catch (e) {
-    alert(`apiErr-verifyemail: ${e.message}`);
     dispatchAuthError(
       'error',
       e.message || 'Unable to verify, please try again',
@@ -176,15 +165,12 @@ export const verifyEmail = (code) => async (dispatch) => {
 
 export const verificationCode = () => async (dispatch) => {
   try {
-    alert(`apiUrl: ${baseUrl}/auth/verification-code`);
     dispatch(clearAuthResponseMsg());
     dispatch(setAuthLoader(true));
     // const response = await axios.post(`${baseUrl}/auth/verification-code`);
     const response = await verificationcode(code);
-        alert(JSON.stringify(response),"data");
     return true;
   } catch (e) {
-    alert(`apiErr-verificationcode: ${e}`);
     dispatchAuthError('error', getAPIResponseError(e) || 'Unable to signup, please try again', dispatch);
     return false;
   } finally {
