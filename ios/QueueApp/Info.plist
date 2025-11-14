@@ -52,6 +52,7 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
 	<key>UIAppFonts</key>
+	<key>UIBackgroundModes</key>
 	<array>
 		<string>AntDesign.ttf</string>
 		<string>Entypo.ttf</string>
@@ -75,6 +76,7 @@
 		<string>OpenSans-SemiBold.ttf</string>
 		<string>SimpleLineIcons.ttf</string>
 		<string>Zocial.ttf</string>
+		<string>remote-notification</string>
 	</array>
 </dict>
 </plist>

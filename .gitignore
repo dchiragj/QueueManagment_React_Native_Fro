@@ -151,3 +151,4 @@ buck-out/
 # Misc
 *.swp
 .idea/
+config.bat

@@ -16,11 +16,15 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import AwesomeAlert from 'react-native-awesome-alerts';
 
 const CompletedToken = ({ navigation }) => {
- const [myTokens, setMyTokens] = useState([]);
+  const [myTokens, setMyTokens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAlert, setShowAlert] = useState(false);
   const [selectedTokenId, setSelectedTokenId] = useState(null);
-    const [ categories, setCategories ] = useState( [] );
+  const [ categories, setCategories ] = useState( [] );
+  
+  const onPressMyTokenDetails = (tokenId) => {
+    navigation.navigate(screens.MyTokenDetails, { tokenId });
+  };
 
   useEffect(() => {
     const loadMyTokens = async () => {
@@ -106,7 +110,7 @@ const CompletedToken = ({ navigation }) => {
     <SafeAreaView style={[AppStyles.root]}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {myTokens.map((token) => (
-          <Card key={token.id} style={styles.wrapper}>
+          <Card key={token.id} style={styles.wrapper} onPress={() => onPressMyTokenDetails(token.id)}>
             <View style={styles.mainWrapper}>
               {/* Token Number */}
               <View style={styles.numberTextWrapper}>

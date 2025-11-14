@@ -90,8 +90,6 @@ import { verticalScale, scale, moderateScale } from 'react-native-size-matters';
 import AwesomeAlert from 'react-native-awesome-alerts';
 
 const CompletedTokenListItem = ( props ) => {
-  console.log(props,"props");
-  
   const [ tokens, setTokens ] = useState( [] );
   const [ error, setError ] = useState( null );
   const [ categories, setCategories ] = useState( [] );

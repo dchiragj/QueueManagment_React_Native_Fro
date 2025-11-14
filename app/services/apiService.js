@@ -32,9 +32,18 @@ export const getCategories = async () => {
     throw new Error( error.message || 'Failed to fetch categories' );
   }
 };
+export const getDesksByCategory = async (categoryId) => {
+  console.log(categoryId,"categoryId");
+  
+  try {
+    const response = await apiService.get(`/queue/desks/${categoryId}`);
+    return response.data.data || []; // backend returns { success: true, data: [...] }
+  } catch (error) {
+    console.error('getDesksByCategory error:', error.response?.data || error.message);
+    throw new Error(error.response?.data?.message || 'Failed to fetch desks');
+  }
+};
 export const forgotPassword = async ( email ) => {
-
-
   try {
     const response = await apiService.post( '/auth/forgot-password', { email } );
     return response.data;  // return backend response
@@ -137,9 +146,9 @@ export const getQueueList = async ( params = {} ) => {
   }
 };
 
-export const checkToken = async ( { queueId, categoryId } ) => {
+export const checkToken = async ( payload ) => {
   try {
-    const response = await apiService.post( '/token/check-token', { queueId, categoryId } );
+    const response = await apiService.post( '/token/check-token',  payload  );
     return response;
   } catch ( error ) {
     console.error( 'Check token error:', error.response?.data || error.message );
