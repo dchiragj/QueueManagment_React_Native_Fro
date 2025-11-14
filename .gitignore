@@ -125,7 +125,6 @@ ios/.idea/
 coverage/
 
 # VS Code
-.vscode/
 
 # Buck
 buck-out/
@@ -151,3 +150,4 @@ buck-out/
 # Misc
 *.swp
 .idea/
+config.bat

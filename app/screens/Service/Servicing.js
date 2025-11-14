@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, FlatList, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, FlatList, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppStyles from '@app/app/styles/AppStyles';
 import ScrollableAvoidKeyboard from '@app/app/components/ScrollableAvoidKeyboard/ScrollableAvoidKeyboard';
@@ -25,6 +25,7 @@ const Servicing = ( { navigation } ) => {
   const [ categories, setCategories ] = useState( [] );
   const [ completedHistory, setCompletedHistory ] = useState( [] );
   const [ loading, setLoading ] = useState( true );
+  const [showMore, setShowMore] = useState(false);
 
   const showToast = ( type, title, message ) => {
     Toast.show( {
@@ -352,9 +353,6 @@ const skip = async () => {
           <Text style={ styles.recoverText }>Recover</Text>
         </TouchableOpacity>
       ) }
-      {/* { item.status === 'SERVED' && (
-        <Text style={ { color: '#4CAF50', fontWeight: 'bold' } }>Completed</Text>
-      ) } */}
     </View>
   );
   if ( loading ) {
@@ -367,7 +365,7 @@ const skip = async () => {
 
   return (
     <SafeAreaView style={ [ AppStyles.root ] }>
-      <ScrollableAvoidKeyboard showsVerticalScrollIndicator={ false } keyboardShouldPersistTaps="handled">
+      <ScrollView showsVerticalScrollIndicator={ false } contentContainerStyle={{ paddingBottom: 80 }} keyboardShouldPersistTaps="handled">
         <View style={ styles.header }>
           <View style={ styles.servingContainer }>
             <View style={ styles.servingcount }>
@@ -402,32 +400,71 @@ const skip = async () => {
             />
           </View>
         ) }
-        { completedHistory.length > 0 && (
-          <View style={ styles.historySection }>
-            <Text style={ styles.historyTitle }>Completed History (Served Today)-{ completedHistory.length }</Text>
+       {completedHistory.length > 0 && (
+  <View style={styles.historySection}>
+    <Text style={styles.historyTitle}>
+      Completed History (Served Today) - {completedHistory.length}
+    </Text>
+
+    {/* Always show the most recent (latest) served token */}
+    {completedHistory[0] && (
+      <View style={styles.historyItem}>
+        <Text style={styles.historyToken}>
+          Token {completedHistory[0].tokenNumber} - {completedHistory[0].name}
+        </Text>
+        <Text style={styles.historyTime}>
+          Served at{' '}
+          {new Date(completedHistory[0].completedAt).toLocaleTimeString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+          })}
+        </Text>
+      </View>
+    )}
+
+    {/* Expandable "More..." section */}
+    {completedHistory.length > 1 && (
+      <View>
+        <TouchableOpacity
+          onPress={() => setShowMore(prev => !prev)}
+          style={styles.moreButton}
+        >
+          <Text style={styles.moreText}>
+            {showMore ? 'Hide' : 'More…'} ({completedHistory.length - 1} previous)
+          </Text>
+        </TouchableOpacity>
+
+        {/* Show older tokens when expanded */}
+        {showMore && (
+          <View style={styles.expandedHistory}>
             <FlatList
-              data={ completedHistory }
-              keyExtractor={ item => item.id.toString() }
-              scrollEnabled={ false }
-              renderItem={ ( { item } ) => {
-                return (
-                  <View style={ styles.historyItem }>
-                    <Text style={ styles.historyToken }>
-                      Token { item.tokenNumber } - { item.name }
-                    </Text>
-                    <Text style={ styles.historyTime }>
-                      Served at { new Date( item.completedAt ).toLocaleTimeString( 'en-IN', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: true
-                      } ) }
-                    </Text>
-                  </View>
-                );
-              } }
+              data={completedHistory.slice(1)} // All except the latest
+              keyExtractor={item => item.id.toString()}
+              scrollEnabled={false}
+              renderItem={({ item }) => (
+                <View style={styles.historyItem}>
+                  <Text style={styles.historyToken}>
+                    Token {item.tokenNumber} - {item.name}
+                  </Text>
+                  <Text style={styles.historyTime}>
+                    Served at{' '}
+                    {new Date(item.completedAt).toLocaleTimeString('en-IN', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true,
+                    })}
+                  </Text>
+                </View>
+              )}
             />
           </View>
-        ) }
+        )}
+      </View>
+    )}
+  </View>
+)}
+      </ScrollView>
         <View style={ styles.queuingControls }>
           <TouchableOpacity style={ styles.buttonGreen } onPress={ callNext }>
             <Text style={ styles.buttonText }>Next</Text>
@@ -435,11 +472,7 @@ const skip = async () => {
           <TouchableOpacity style={ styles.buttonRed } onPress={ skip }>
             <Text style={ styles.buttonText }>Skip</Text>
           </TouchableOpacity>
-          {/* <TouchableOpacity style={ styles.buttonRed } onPress={ () => navigation.goBack() }>
-            <Text style={ styles.buttonText }>Cancel</Text>
-          </TouchableOpacity> */}
         </View>
-      </ScrollableAvoidKeyboard>
     </SafeAreaView>
   );
 };
@@ -549,8 +582,41 @@ const styles = StyleSheet.create( {
     justifyContent: 'space-around',
     padding: 20,
   },
+  fixedBottomControls: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 15,
+    backgroundColor: '#111',
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+    elevation: 10,
+    zIndex: 1000,
+  },
+  moreButton: {
+  alignSelf: 'flex-start',
+  paddingVertical: 6,
+  paddingHorizontal: 12,
+  backgroundColor: '#e3f2fd',
+  borderRadius: 6,
+  marginTop: 4,
+},
+moreText: {
+  fontSize: 13,
+  color: '#1976d2',
+  fontWeight: '600',
+},
+expandedHistory: {
+  marginTop: 8,
+  paddingLeft: 8,
+  borderLeftWidth: 1,
+  borderLeftColor: '#ddd',
+},
   buttonRed: {
-    backgroundColor: '#FF6A00',
+    backgroundColor: colors.primary,
     padding: 10,
     borderRadius: 5,
     marginHorizontal: 5,
@@ -571,6 +637,7 @@ const styles = StyleSheet.create( {
     fontWeight: 'bold',
     paddingHorizontal: 15,
   },
+  
   recordList: {
     marginTop: 5,
   },
@@ -630,7 +697,6 @@ const styles = StyleSheet.create( {
   historySection: {
     marginTop: 20,
     paddingHorizontal: 15,
-    // backgroundColor: '#111',
   },
   historyTitle: {
     color: colors.primary,
