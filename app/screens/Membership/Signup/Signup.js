@@ -33,6 +33,11 @@ function Signup(props) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isPasswordVisible, setPasswordVisibility] = useState(false);
+  // New Business Fields
+  const [businessName, setBusinessName] = useState('');
+  const [businessAddress, setBusinessAddress] = useState('');
+  const [businessRegistrationNumber, setBusinessRegistrationNumber] = useState('');
+  const [businessPhone, setBusinessPhone] = useState('');
 
   const { loading, resError = {} } = props.auth;
 
@@ -67,8 +72,8 @@ function Signup(props) {
     }
   }, [resError]);
 
-  const onPressSignup = async () => {
-    props.clearAuthResponseMsg(); // Clear previous errors
+ const onPressSignup = async () => {
+    props.clearAuthResponseMsg();
 
     const role =
       selectRole.customer && selectRole.merchant
@@ -88,6 +93,26 @@ function Signup(props) {
       return;
     }
 
+    // Validate business fields if merchant is selected
+    if (selectRole.merchant) {
+      if (!businessName.trim()) {
+        Toast.show({
+          type: 'error',
+          text1: 'Business Name Required',
+          text2: 'Please enter your business name',
+        });
+        return;
+      }
+      if (!businessAddress.trim()) {
+        Toast.show({
+          type: 'error',
+          text1: 'Business Address Required',
+          text2: 'Please enter your business address',
+        });
+        return;
+      }
+    }
+
     const signupObj = {
       firstName: fname.trim(),
       lastName: lname.trim(),
@@ -96,6 +121,13 @@ function Signup(props) {
       password: password,
       confirmPassword: confirmPassword,
       role,
+      // Conditionally include business details
+      ...(selectRole.merchant && {
+        businessName: businessName.trim(),
+        businessAddress: businessAddress.trim(),
+        businessRegistrationNumber: businessRegistrationNumber.trim(),
+        businessPhone: businessPhone.trim(),
+      }),
     };
 
     const result = await props.signup(signupObj);
@@ -264,6 +296,73 @@ function Signup(props) {
                 value={confirmPassword}
               />
             </Validation>
+            {/* Business Details - Show only if Merchant is selected */}
+            {selectRole.merchant && (
+              <>
+                <View style={s.sectionHeader}>
+                  <TextView
+                    text="Business Information"
+                    type="body-head"
+                    color={colors.lightWhite}
+                    style={{ marginTop: verticalScale(20) }}
+                  />
+                </View>
+
+                <Validation error={resError.businessName}>
+                  <Input
+                    onChangeText={setBusinessName}
+                    style={s.inputText}
+                    returnKeyType={'next'}
+                    placeholder='Business Name'
+                    isIconLeft={true}
+                    leftIconName={'business'}
+                    editable={!loading}
+                    value={businessName}
+                  />
+                </Validation>
+
+                <Validation error={resError.businessAddress}>
+                  <Input
+                    onChangeText={setBusinessAddress}
+                    style={s.inputText}
+                    returnKeyType={'next'}
+                    placeholder='Business Address'
+                    isIconLeft={true}
+                    leftIconName={'location'}
+                    editable={!loading}
+                    value={businessAddress}
+                  />
+                </Validation>
+
+                <Validation error={resError.businessRegistrationNumber}>
+                  <Input
+                    onChangeText={setBusinessRegistrationNumber}
+                    style={s.inputText}
+                    returnKeyType={'next'}
+                    placeholder='Business Registration Number'
+                    isIconLeft={true}
+                    leftIconName={'document-text'}
+                    editable={!loading}
+                    value={businessRegistrationNumber}
+                  />
+                </Validation>
+
+                <Validation error={resError.businessPhone}>
+                  <Input
+                    onChangeText={setBusinessPhone}
+                    style={s.inputText}
+                    returnKeyType={'done'}
+                    onSubmitEditing={onPressSignup}
+                    keyboardType="phone-pad"
+                    placeholder='Business Phone'
+                    isIconLeft={true}
+                    leftIconName={'call'}
+                    editable={!loading}
+                    value={businessPhone}
+                  />
+                </Validation>
+              </>
+            )}
           </FormGroup>
 
           {/* Sign Up Button */}
@@ -302,7 +401,7 @@ const s = StyleSheet.create({
   },
   customermarbtn: {
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: colors.white,
     borderRadius: scale(borderRadius),
     paddingTop: verticalScale(5),
     paddingBottom: verticalScale(10),
@@ -311,7 +410,7 @@ const s = StyleSheet.create({
     position: 'relative',
   },
   selectedBtn: {
-    borderColor: colors.white,
+    borderColor: colors.primary,
     backgroundColor: 'rgba(255,255,255,0.1)',
   },
   customermarText: {

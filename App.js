@@ -14,12 +14,19 @@ import { colors } from './app/styles';
 import store from './app/store/store';
 import AppStyles from './app/styles/AppStyles';
 import Toast from 'react-native-toast-message';
+import Geolocation from 'react-native-geolocation-service';
 
 function App() {
   useEffect(() => {
     console.log('Platform :', Platform.OS);
     LogBox.ignoreAllLogs(); // Ignore warnings in application but showing in metro
   }, []);
+
+Geolocation.setRNConfiguration({
+  skipPermissionRequests: false,
+  authorizationLevel: 'whenInUse',
+  locationProvider: 'google',
+});
 
   return (
     <View style={AppStyles.rootStyle}>
@@ -29,6 +36,7 @@ function App() {
       </Provider>
       <Toast />
       {/* <OfflineNotice /> */}
+      
     </View>
   );
 }

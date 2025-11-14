@@ -213,13 +213,15 @@ const MyQueueListItem = ({ name, category, date, desks, people, navigation, item
       Alert.alert('Error', 'Failed to delete queue. Please try again.');
     }
   };
-const handleSignInDesk = () => {
+  
+  const handleSignInDesk = () => {
   if (navigation && item) {
     const queueId = item.id || item._id;
     console.log('Navigating with queue:', queueId, categoryid);
     navigation.navigate('Service', { queueId, categoryid });
   }
-};
+  };
+  
   return (
     <Card style={s.wrapper}>
       <Touchable style={[s.mainWrapper, s.touchableWrapper]}>

@@ -15,6 +15,9 @@ const MyQueueDetail = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+
+  console.log(queue,"queue");
+  
   // Helper function to map status to label
   const getStatusLabel = (status) => {
     switch (status) {
@@ -103,14 +106,14 @@ const MyQueueDetail = ({ navigation }) => {
               </View>
 
               {/* Queue Statistics */}
-              <View style={styles.section}>
+              {/* <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Queue Statistics</Text>
                 <View style={styles.statsContainer}>
                   <StatCard title="Desks" value={queue.noOfDesk?.toString() || '0'} icon="🪑" />
                   <StatCard title="People" value={(queue.end_number - queue.start_number + 1)?.toString() || '0'} icon="👥" />
                   <StatCard title="Current No." value={queue.current_number?.toString() || '0'} icon="🎯" />
                 </View>
-              </View>
+              </View> */}
 
               {/* Additional Information */}
               {(queue.description || queue.location) && (
@@ -118,8 +121,9 @@ const MyQueueDetail = ({ navigation }) => {
                   <Text style={styles.sectionTitle}>Additional Information</Text>
                   {queue.description && (
                     <View style={styles.infoRow}>
-                      <Text style={styles.infoLabel}>Description:</Text>
-                      <Text style={styles.infoValue}>{queue.description}</Text>
+                      <DetailRow label="Description" value={queue.description || 'Unknown'} />
+                      {/* <Text style={styles.infoLabel}>Description: {queue.description}</Text>
+                      <Text style={styles.infoValue}>{queue.description}</Text> */}
                     </View>
                   )}
                   {queue.location && (
@@ -315,7 +319,7 @@ const styles = StyleSheet.create({
   },
   infoRow: {
     paddingVertical: 12,
-    borderBottomWidth: 1,
+    // borderBottomWidth: 1,
     borderBottomColor: colors.border || '#f0f0f0',
   },
   infoLabel: {
@@ -327,7 +331,7 @@ const styles = StyleSheet.create({
   infoValue: {
     fontSize: 14,
     color: "#fff",
-    lineHeight: 20,
+    lineHeight: 20, 
   },
 });
 
